@@ -10,19 +10,24 @@ import './styles.css';
 const App = () => {
   const [activeTab, setActiveTab] = useState('timer');
   const [projects, setProjects] = useState([]);
+  const [timeEntries, setTimeEntries] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load projects on component mount
+  // Load data on component mount and refresh
   useEffect(() => {
-    loadProjects();
+    loadData();
   }, [refreshTrigger]);
 
-  const loadProjects = async () => {
+  const loadData = async () => {
     try {
-      const projectList = await window.electronAPI.getProjects();
+      const [projectList, entriesList] = await Promise.all([
+        window.electronAPI.getProjects(),
+        window.electronAPI.getTimeEntries()
+      ]);
       setProjects(projectList);
+      setTimeEntries(entriesList);
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      console.error('Failed to load data:', error);
     }
   };
 
@@ -60,6 +65,7 @@ const App = () => {
       <main className="app-main">
         <ActiveComponent 
           projects={projects} 
+          timeEntries={timeEntries}
           onRefresh={handleRefresh}
         />
       </main>
