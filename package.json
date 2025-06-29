@@ -1,0 +1,60 @@
+{
+  "name": "project-time-tracker",
+  "version": "1.0.0",
+  "description": "Simple time tracking per project",
+  "main": "src/main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "electron": "electron .",
+    "electron-dev": "ELECTRON_IS_DEV=1 electron .",
+    "dist": "electron-builder",
+    "pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.doumdi.project-time-tracker",
+    "productName": "Project Time Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "keywords": ["time-tracking", "productivity", "electron"],
+  "author": "Dominic Létourneau",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^4.5.0",
+    "date-fns": "^4.1.0",
+    "electron": "^37.1.0",
+    "react": "^19.1.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.27.7",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "electron-builder": "^26.0.12",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
+}
