@@ -38,7 +38,6 @@ Thumbs.db
 
 # Electron
 out/
-app/
 packages/
 
 # Logs
