@@ -10,7 +10,8 @@
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=1 electron .",
     "dist": "electron-builder",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "dev": "concurrently \"npm start\" \"wait-on http://localhost:8080 && npm run electron-dev\""
   },
   "build": {
     "appId": "com.doumdi.project-time-tracker",
@@ -33,7 +34,11 @@
       "target": "AppImage"
     }
   },
-  "keywords": ["time-tracking", "productivity", "electron"],
+  "keywords": [
+    "time-tracking",
+    "productivity",
+    "electron"
+  ],
   "author": "Dominic Létourneau",
   "license": "MIT",
   "dependencies": {
@@ -49,10 +54,12 @@
     "@babel/core": "^7.27.7",
     "@babel/preset-react": "^7.27.1",
     "babel-loader": "^10.0.0",
+    "concurrently": "^9.2.0",
     "css-loader": "^7.1.2",
     "electron-builder": "^26.0.12",
     "html-webpack-plugin": "^5.6.3",
     "style-loader": "^4.0.0",
+    "wait-on": "^8.0.3",
     "webpack": "^5.99.9",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2"
