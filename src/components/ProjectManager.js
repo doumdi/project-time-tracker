@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const ProjectManager = ({ projects, onRefresh }) => {
+  const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [formData, setFormData] = useState({
@@ -29,7 +31,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      alert('Project name is required');
+      alert(t('projects.nameRequired'));
       return;
     }
 
@@ -39,8 +41,10 @@ const ProjectManager = ({ projects, onRefresh }) => {
           ...editingProject,
           ...formData
         });
+        alert(t('projects.projectUpdated'));
       } else {
         await window.electronAPI.addProject(formData);
+        alert(t('projects.projectAdded'));
       }
       
       setFormData({ name: '', description: '', color: '#4CAF50' });
@@ -49,7 +53,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
       onRefresh();
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Error saving project: ' + error.message);
+      const errorMsg = editingProject ? t('projects.errorUpdating') : t('projects.errorAdding');
+      alert(`${errorMsg}: ` + error.message);
     }
   };
 
@@ -58,13 +63,14 @@ const ProjectManager = ({ projects, onRefresh }) => {
   };
 
   const handleDelete = async (project) => {
-    if (window.confirm(`Are you sure you want to delete "${project.name}"? This will also delete all time entries for this project.`)) {
+    if (window.confirm(t('projects.confirmDelete'))) {
       try {
         await window.electronAPI.deleteProject(project.id);
+        alert(t('projects.projectDeleted'));
         onRefresh();
       } catch (error) {
         console.error('Error deleting project:', error);
-        alert('Error deleting project: ' + error.message);
+        alert(`${t('projects.errorDeleting')}: ` + error.message);
       }
     }
   };
@@ -78,52 +84,52 @@ const ProjectManager = ({ projects, onRefresh }) => {
   const formatTime = (minutes) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+    return `${hours}${t('common.hours')} ${mins}${t('common.minutes')}`;
   };
 
   return (
     <div className="fade-in">
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2>Project Management</h2>
+          <h2>{t('projects.title')}</h2>
           <button 
             className="btn"
             onClick={() => setShowForm(true)}
             disabled={showForm}
           >
-            Add Project
+            {t('projects.addProject')}
           </button>
         </div>
 
         {showForm && (
           <form onSubmit={handleSubmit} style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '6px' }}>
-            <h3>{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
+            <h3>{editingProject ? t('projects.updateProject') : t('projects.addProject')}</h3>
             
             <div className="form-group">
-              <label className="form-label">Project Name *</label>
+              <label className="form-label">{t('projects.name')}</label>
               <input
                 type="text"
                 className="form-input"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter project name"
+                placeholder={t('projects.name')}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Description</label>
+              <label className="form-label">{t('projects.description')}</label>
               <textarea
                 className="form-textarea"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Project description (optional)"
+                placeholder={t('projects.descriptionPlaceholder')}
                 rows="3"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Color</label>
+              <label className="form-label">{t('projects.color')}</label>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                 {colors.map(color => (
                   <button
@@ -145,10 +151,10 @@ const ProjectManager = ({ projects, onRefresh }) => {
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button type="submit" className="btn">
-                {editingProject ? 'Update Project' : 'Add Project'}
+                {editingProject ? t('projects.updateProject') : t('projects.addProject')}
               </button>
               <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-                Cancel
+                {t('projects.cancel')}
               </button>
             </div>
           </form>
@@ -156,19 +162,19 @@ const ProjectManager = ({ projects, onRefresh }) => {
 
         {projects.length === 0 ? (
           <div className="empty-state">
-            <h3>No Projects Yet</h3>
-            <p>Create your first project to start tracking time!</p>
+            <h3>{t('projects.noProjects')}</h3>
+            <p>{t('projects.createFirst')}</p>
           </div>
         ) : (
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Project</th>
-                  <th>Description</th>
-                  <th>Time Tracked</th>
-                  <th>Entries</th>
-                  <th>Actions</th>
+                  <th>{t('entries.project')}</th>
+                  <th>{t('entries.description')}</th>
+                  <th>{t('projects.totalTime')}</th>
+                  <th>{t('projects.entries')}</th>
+                  <th>{t('entries.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,13 +202,13 @@ const ProjectManager = ({ projects, onRefresh }) => {
                           className="btn btn-secondary btn-small"
                           onClick={() => handleEdit(project)}
                         >
-                          Edit
+                          {t('projects.edit')}
                         </button>
                         <button
                           className="btn btn-danger btn-small"
                           onClick={() => handleDelete(project)}
                         >
-                          Delete
+                          {t('projects.delete')}
                         </button>
                       </div>
                     </td>

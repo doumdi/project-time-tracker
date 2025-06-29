@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks } from 'date-fns';
+import { useLanguage } from '../contexts/LanguageContext';
 
 ChartJS.register(
   CategoryScale,
@@ -16,6 +17,7 @@ ChartJS.register(
 );
 
 const ChartsView = ({ timeEntries, projects }) => {
+  const { t } = useLanguage();
   const [chartType, setChartType] = useState('projects'); // 'projects', 'weekly', 'daily'
   const [dateRange, setDateRange] = useState('last4weeks'); // 'last4weeks', 'thisMonth', 'all'
   const [filteredEntries, setFilteredEntries] = useState([]);
@@ -52,7 +54,7 @@ const ChartsView = ({ timeEntries, projects }) => {
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    return hours > 0 ? `${hours}${t('common.hours')} ${mins}${t('common.minutes')}` : `${mins}${t('common.minutes')}`;
   };
 
   const generateProjectChart = () => {
@@ -381,34 +383,34 @@ const ChartsView = ({ timeEntries, projects }) => {
   return (
     <div className="fade-in">
       <div className="card">
-        <h2>Charts & Analytics</h2>
+        <h2>{t('charts.title')}</h2>
         
         {/* Controls */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
           <div>
-            <label className="form-label">Chart Type</label>
+            <label className="form-label">{t('charts.timeByProject')}</label>
             <select
               className="form-select"
               value={chartType}
               onChange={(e) => setChartType(e.target.value)}
             >
-              <option value="projects">Projects (Bar)</option>
-              <option value="projectsPie">Projects (Pie)</option>
-              <option value="weekly">Weekly Trend</option>
-              <option value="daily">Daily Trend</option>
+              <option value="projects">{t('charts.timeByProject')} (Bar)</option>
+              <option value="projectsPie">{t('charts.timeByProject')} (Pie)</option>
+              <option value="weekly">{t('charts.weeklyTrend')}</option>
+              <option value="daily">{t('charts.dailyTimeTracked')}</option>
             </select>
           </div>
           
           <div>
-            <label className="form-label">Date Range</label>
+            <label className="form-label">{t('charts.dateRange')}</label>
             <select
               className="form-select"
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
             >
-              <option value="last4weeks">Last 4 Weeks</option>
-              <option value="thisMonth">This Month</option>
-              <option value="all">All Time</option>
+              <option value="last4weeks">{t('charts.last30Days')}</option>
+              <option value="thisMonth">{t('charts.last30Days')}</option>
+              <option value="all">{t('charts.allTime')}</option>
             </select>
           </div>
         </div>
@@ -424,28 +426,28 @@ const ChartsView = ({ timeEntries, projects }) => {
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1976d2' }}>
               {formatDuration(stats.totalMinutes)}
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Time</div>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>{t('charts.totalTime')}</div>
           </div>
           
           <div style={{ padding: '1rem', background: '#e8f5e8', borderRadius: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#388e3c' }}>
               {stats.totalEntries}
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Entries</div>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>{t('charts.totalEntries')}</div>
           </div>
           
           <div style={{ padding: '1rem', background: '#fff3e0', borderRadius: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f57c00' }}>
               {stats.uniqueDays}
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Active Days</div>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>{t('charts.activeDays')}</div>
           </div>
           
           <div style={{ padding: '1rem', background: '#fce4ec', borderRadius: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#c2185b' }}>
               {formatDuration(Math.round(stats.averagePerDay))}
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Avg/Day</div>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>{t('charts.averagePerDay')}</div>
           </div>
         </div>
 

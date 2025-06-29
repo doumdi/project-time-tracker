@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TimeTracker = ({ projects, onRefresh }) => {
+  const { t } = useLanguage();
   const [selectedProject, setSelectedProject] = useState('');
   const [description, setDescription] = useState('');
   const [isTracking, setIsTracking] = useState(false);
@@ -34,7 +36,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
 
   const handleStartStop = () => {
     if (!selectedProject) {
-      alert('Please select a project first');
+      alert(t('timer.selectProjectFirst'));
       return;
     }
 
@@ -77,10 +79,10 @@ const TimeTracker = ({ projects, onRefresh }) => {
       setDescription('');
       onRefresh();
       
-      alert(`Time entry saved: ${Math.floor(roundedDuration / 60)}h ${roundedDuration % 60}m`);
+      alert(`${t('timer.timeEntrySaved')}: ${Math.floor(roundedDuration / 60)}${t('common.hours')} ${roundedDuration % 60}${t('common.minutes')}`);
     } catch (error) {
       console.error('Error saving time entry:', error);
-      alert('Error saving time entry: ' + error.message);
+      alert(`${t('timer.errorSaving')}: ` + error.message);
       setIsTracking(false);
     }
   };
@@ -89,7 +91,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
     e.preventDefault();
     
     if (!selectedProject || !quickEntry.date || !quickEntry.startTime) {
-      alert('Please fill in all required fields');
+      alert(t('timer.fillAllFields'));
       return;
     }
 
@@ -116,10 +118,10 @@ const TimeTracker = ({ projects, onRefresh }) => {
       });
       onRefresh();
       
-      alert(`Quick entry saved: ${Math.floor(quickEntry.duration / 60)}h ${quickEntry.duration % 60}m`);
+      alert(`${t('timer.quickEntrySaved')}: ${Math.floor(quickEntry.duration / 60)}${t('common.hours')} ${quickEntry.duration % 60}${t('common.minutes')}`);
     } catch (error) {
       console.error('Error saving quick entry:', error);
-      alert('Error saving quick entry: ' + error.message);
+      alert(`${t('timer.errorSavingQuick')}: ` + error.message);
     }
   };
 
@@ -128,18 +130,18 @@ const TimeTracker = ({ projects, onRefresh }) => {
   return (
     <div className="fade-in">
       <div className="card">
-        <h2>Time Tracker</h2>
+        <h2>{t('timer.title')}</h2>
         
         {/* Project Selection */}
         <div className="form-group">
-          <label className="form-label">Select Project *</label>
+          <label className="form-label">{t('timer.selectProject')}</label>
           <select
             className="form-select"
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
             disabled={isTracking}
           >
-            <option value="">Choose a project...</option>
+            <option value="">{t('timer.chooseProject')}</option>
             {projects.map(project => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -150,8 +152,8 @@ const TimeTracker = ({ projects, onRefresh }) => {
 
         {projects.length === 0 && (
           <div className="empty-state">
-            <h3>No Projects Available</h3>
-            <p>Please create a project first in the Projects tab.</p>
+            <h3>{t('timer.noProjects')}</h3>
+            <p>{t('timer.createProjectFirst')}</p>
           </div>
         )}
 
@@ -159,13 +161,13 @@ const TimeTracker = ({ projects, onRefresh }) => {
           <>
             {/* Description */}
             <div className="form-group">
-              <label className="form-label">Description (Optional)</label>
+              <label className="form-label">{t('timer.description')}</label>
               <input
                 type="text"
                 className="form-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="What are you working on?"
+                placeholder={t('timer.descriptionPlaceholder')}
                 disabled={!selectedProject}
               />
             </div>
@@ -179,7 +181,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
                   onChange={(e) => setQuickEntryMode(e.target.checked)}
                   disabled={isTracking}
                 />
-                Quick Entry Mode (for past work)
+                {t('timer.quickEntryMode')}
               </label>
             </div>
 
@@ -197,24 +199,24 @@ const TimeTracker = ({ projects, onRefresh }) => {
                     disabled={!selectedProject}
                     style={{ fontSize: '1.1rem', padding: '1rem 2rem' }}
                   >
-                    {isTracking ? 'Stop Timer' : 'Start Timer'}
+                    {isTracking ? t('timer.stopTimer') : t('timer.startTimer')}
                   </button>
                 </div>
 
                 {isTracking && (
                   <div style={{ textAlign: 'center', color: '#4CAF50', fontWeight: '500' }}>
-                    ⏱️ Timer is running...
+                    {t('timer.timerRunning')}
                   </div>
                 )}
               </>
             ) : (
               /* Quick Entry Mode */
               <form onSubmit={handleQuickEntry} style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '6px' }}>
-                <h3>Quick Time Entry</h3>
+                <h3>{t('timer.quickTimeEntry')}</h3>
                 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Date *</label>
+                    <label className="form-label">{t('timer.date')}</label>
                     <input
                       type="date"
                       className="form-input"
@@ -225,7 +227,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
                   </div>
                   
                   <div className="form-group">
-                    <label className="form-label">Start Time *</label>
+                    <label className="form-label">{t('timer.startTime')}</label>
                     <input
                       type="time"
                       className="form-input"
@@ -237,7 +239,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Duration</label>
+                  <label className="form-label">{t('timer.duration')}</label>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                     {quickDurations.map(minutes => (
                       <button
@@ -246,7 +248,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
                         className={`btn btn-small ${quickEntry.duration === minutes ? '' : 'btn-secondary'}`}
                         onClick={() => setQuickEntry({ ...quickEntry, duration: minutes })}
                       >
-                        {minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`}
+                        {minutes < 60 ? `${minutes}${t('common.minutes')}` : `${Math.floor(minutes / 60)}${t('common.hours')}${minutes % 60 ? ` ${minutes % 60}${t('common.minutes')}` : ''}`}
                       </button>
                     ))}
                   </div>
@@ -257,12 +259,12 @@ const TimeTracker = ({ projects, onRefresh }) => {
                     onChange={(e) => setQuickEntry({ ...quickEntry, duration: parseInt(e.target.value) || 5 })}
                     min="5"
                     step="5"
-                    placeholder="Custom duration (minutes)"
+                    placeholder={t('timer.customDuration')}
                   />
                 </div>
 
                 <button type="submit" className="btn">
-                  Add Time Entry ({Math.floor(quickEntry.duration / 60)}h {quickEntry.duration % 60}m)
+                  {t('timer.addTimeEntry')} ({Math.floor(quickEntry.duration / 60)}{t('common.hours')} {quickEntry.duration % 60}{t('common.minutes')})
                 </button>
               </form>
             )}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
+  const { t } = useLanguage();
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [filters, setFilters] = useState({
     projectId: '',
@@ -59,13 +61,14 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
   };
 
   const handleDelete = async (entry) => {
-    if (window.confirm('Are you sure you want to delete this time entry?')) {
+    if (window.confirm(t('entries.confirmDelete'))) {
       try {
         await window.electronAPI.deleteTimeEntry(entry.id);
+        alert(t('entries.entryDeleted'));
         onRefresh();
       } catch (error) {
         console.error('Error deleting time entry:', error);
-        alert('Error deleting time entry: ' + error.message);
+        alert(`${t('entries.errorDeleting')}: ` + error.message);
       }
     }
   };
@@ -77,7 +80,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+    return `${hours}${t('common.hours')} ${mins}${t('common.minutes')}`;
   };
 
   const getTotalTime = () => {
@@ -96,21 +99,21 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
   return (
     <div className="fade-in">
       <div className="card">
-        <h2>Time Entries</h2>
+        <h2>{t('entries.title')}</h2>
         
         {/* Filters */}
         <div style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Filters</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>{t('entries.filterByProject')}</h3>
           
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Project</label>
+              <label className="form-label">{t('entries.project')}</label>
               <select
                 className="form-select"
                 value={filters.projectId}
                 onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
               >
-                <option value="">All Projects</option>
+                <option value="">{t('entries.all')}</option>
                 {projects.map(project => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -120,7 +123,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
             </div>
             
             <div className="form-group">
-              <label className="form-label">Start Date</label>
+              <label className="form-label">{t('entries.fromDate')}</label>
               <input
                 type="date"
                 className="form-input"
@@ -130,7 +133,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
             </div>
             
             <div className="form-group">
-              <label className="form-label">End Date</label>
+              <label className="form-label">{t('entries.toDate')}</label>
               <input
                 type="date"
                 className="form-input"
@@ -142,13 +145,13 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Description Contains</label>
+              <label className="form-label">{t('entries.filterByDescription')}</label>
               <input
                 type="text"
                 className="form-input"
                 value={filters.description}
                 onChange={(e) => setFilters({ ...filters, description: e.target.value })}
-                placeholder="Search descriptions..."
+                placeholder={t('entries.filterByDescription')}
               />
             </div>
             
@@ -159,7 +162,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
                 className="btn btn-secondary"
                 onClick={clearFilters}
               >
-                Clear Filters
+                {t('entries.clearFilters')}
               </button>
             </div>
           </div>
@@ -168,7 +171,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
         {/* Summary */}
         <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#e3f2fd', borderRadius: '6px' }}>
           <strong>
-            Showing {filteredEntries.length} entries • Total Time: {formatDuration(getTotalTime())}
+            {filteredEntries.length} {t('projects.entries')} • {t('projects.totalTime')}: {formatDuration(getTotalTime())}
           </strong>
         </div>
 
@@ -193,10 +196,10 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
               width: '90%',
               maxWidth: '500px'
             }}>
-              <h3>Edit Time Entry</h3>
+              <h3>{t('entries.edit')}</h3>
               
               <div className="form-group">
-                <label className="form-label">Project</label>
+                <label className="form-label">{t('entries.project')}</label>
                 <select
                   className="form-select"
                   value={editingEntry.project_id}
@@ -214,7 +217,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Description</label>
+                <label className="form-label">{t('entries.description')}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -228,7 +231,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Start Date</label>
+                  <label className="form-label">{t('timer.date')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -245,7 +248,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Start Time</label>
+                  <label className="form-label">{t('timer.startTime')}</label>
                   <input
                     type="time"
                     className="form-input"
@@ -263,7 +266,7 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Duration (minutes)</label>
+                <label className="form-label">{t('timer.duration')} (minutes)</label>
                 <input
                   type="number"
                   className="form-input"
@@ -282,13 +285,13 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
                   className="btn btn-secondary"
                   onClick={() => setEditingEntry(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button 
                   className="btn"
                   onClick={handleSaveEdit}
                 >
-                  Save Changes
+                  {t('common.save')}
                 </button>
               </div>
             </div>
@@ -298,10 +301,10 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
         {/* Time Entries Table */}
         {filteredEntries.length === 0 ? (
           <div className="empty-state">
-            <h3>No Time Entries Found</h3>
+            <h3>{t('entries.noEntries')}</h3>
             <p>
               {timeEntries.length === 0 
-                ? 'Start tracking time to see entries here!' 
+                ? t('entries.startTracking')
                 : 'Try adjusting your filters.'}
             </p>
           </div>
@@ -310,12 +313,12 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Project</th>
-                  <th>Description</th>
-                  <th>Date</th>
-                  <th>Start Time</th>
-                  <th>Duration</th>
-                  <th>Actions</th>
+                  <th>{t('entries.project')}</th>
+                  <th>{t('entries.description')}</th>
+                  <th>{t('timer.date')}</th>
+                  <th>{t('entries.startTime')}</th>
+                  <th>{t('entries.duration')}</th>
+                  <th>{t('entries.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,13 +342,13 @@ const TimeEntryList = ({ timeEntries, projects, onRefresh }) => {
                           className="btn btn-secondary btn-small"
                           onClick={() => handleEdit(entry)}
                         >
-                          Edit
+                          {t('entries.edit')}
                         </button>
                         <button
                           className="btn btn-danger btn-small"
                           onClick={() => handleDelete(entry)}
                         >
-                          Delete
+                          {t('entries.delete')}
                         </button>
                       </div>
                     </td>

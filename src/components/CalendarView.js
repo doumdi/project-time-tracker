@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from 'date-fns';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CalendarView = ({ timeEntries, projects }) => {
+  const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
   const [calendarData, setCalendarData] = useState([]);
@@ -284,25 +286,25 @@ const CalendarView = ({ timeEntries, projects }) => {
       <div className="card">
         <div className="calendar-header">
           <div>
-            <h2>Calendar View</h2>
+            <h2>{t('calendar.title')}</h2>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <button
                 className={`btn btn-small ${viewMode === 'month' ? '' : 'btn-secondary'}`}
                 onClick={() => setViewMode('month')}
               >
-                Month
+                {t('calendar.month')}
               </button>
               <button
                 className={`btn btn-small ${viewMode === 'week' ? '' : 'btn-secondary'}`}
                 onClick={() => setViewMode('week')}
               >
-                Week
+                {t('calendar.week')}
               </button>
               <button
                 className={`btn btn-small ${viewMode === 'day' ? '' : 'btn-secondary'}`}
                 onClick={() => setViewMode('day')}
               >
-                Day
+                {t('calendar.day')}
               </button>
             </div>
           </div>
@@ -311,16 +313,16 @@ const CalendarView = ({ timeEntries, projects }) => {
             <h3 style={{ margin: '0 0 0.5rem 0' }}>{getDateTitle()}</h3>
             <div className="calendar-nav">
               <button className="btn btn-secondary btn-small" onClick={() => navigate('prev')}>
-                ← Previous
+                ← {t('calendar.previous')}
               </button>
               <button 
                 className="btn btn-secondary btn-small" 
                 onClick={() => setCurrentDate(new Date())}
               >
-                Today
+                {t('calendar.today')}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => navigate('next')}>
-                Next →
+                {t('calendar.next')} →
               </button>
             </div>
           </div>

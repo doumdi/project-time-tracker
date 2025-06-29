@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import TimeTracker from '../components/TimeTracker';
 import ProjectManager from '../components/ProjectManager';
 import TimeEntryList from '../components/TimeEntryList';
 import CalendarView from '../components/CalendarView';
 import ChartsView from '../components/ChartsView';
+import Settings from '../components/Settings';
 import './styles.css';
 
-const App = () => {
+const AppContent = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('timer');
   const [projects, setProjects] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
@@ -36,11 +39,12 @@ const App = () => {
   };
 
   const tabs = [
-    { id: 'timer', label: '⏱️ Time Tracker', component: TimeTracker },
-    { id: 'projects', label: '📁 Projects', component: ProjectManager },
-    { id: 'entries', label: '📝 Time Entries', component: TimeEntryList },
-    { id: 'calendar', label: '📅 Calendar', component: CalendarView },
-    { id: 'charts', label: '📊 Charts', component: ChartsView }
+    { id: 'timer', label: t('app.tabs.timer'), component: TimeTracker },
+    { id: 'projects', label: t('app.tabs.projects'), component: ProjectManager },
+    { id: 'entries', label: t('app.tabs.entries'), component: TimeEntryList },
+    { id: 'calendar', label: t('app.tabs.calendar'), component: CalendarView },
+    { id: 'charts', label: t('app.tabs.charts'), component: ChartsView },
+    { id: 'settings', label: t('app.tabs.settings'), component: Settings }
   ];
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || TimeTracker;
@@ -48,7 +52,7 @@ const App = () => {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Project Time Tracker</h1>
+        <h1>{t('app.title')}</h1>
         <div className="header-tabs">
           {tabs.map(tab => (
             <button
@@ -70,6 +74,14 @@ const App = () => {
         />
       </main>
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 };
 
