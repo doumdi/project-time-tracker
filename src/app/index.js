@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
+import { SettingsProvider } from '../contexts/SettingsContext';
 import TimeTracker from '../components/TimeTracker';
 import ProjectManager from '../components/ProjectManager';
 import TimeEntryList from '../components/TimeEntryList';
@@ -80,7 +81,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <LanguageProvider>
-      <AppContent />
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
     </LanguageProvider>
   );
 };
