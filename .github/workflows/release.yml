@@ -1,0 +1,134 @@
+name: Create Draft Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-draft-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Read version from version.json
+        id: version
+        run: |
+          if [ ! -f version.json ]; then
+            echo "Error: version.json not found"
+            exit 1
+          fi
+
+          MAJOR=$(jq -r '.major' version.json)
+          MINOR=$(jq -r '.minor' version.json)
+          MICRO=$(jq -r '.micro' version.json)
+
+          if [ "$MAJOR" = "null" ] || [ "$MINOR" = "null" ] || \
+             [ "$MICRO" = "null" ]; then
+            echo "Error: Invalid version format in version.json"
+            exit 1
+          fi
+
+          VERSION="v${MAJOR}.${MINOR}.${MICRO}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" \
+             >/dev/null 2>&1; then
+            echo "Tag ${{ steps.version.outputs.version }} already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${{ steps.version.outputs.version }} does not exist"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for new commits since last tag
+        id: check_commits
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tags found, proceeding with release"
+            echo "has_commits=true" >> $GITHUB_OUTPUT
+          else
+            COMMIT_COUNT=$(git rev-list ${LATEST_TAG}..HEAD --count)
+            if [ "$COMMIT_COUNT" -gt 0 ]; then
+              echo "Found $COMMIT_COUNT new commits since $LATEST_TAG"
+              echo "has_commits=true" >> $GITHUB_OUTPUT
+            else
+              echo "No new commits since $LATEST_TAG"
+              echo "has_commits=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        if: |
+          steps.check_tag.outputs.exists == 'false' &&
+          steps.check_commits.outputs.has_commits == 'true'
+        run: |
+          # Get the latest tag (if any)
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tags found, generating changelog from first commit"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            echo "Generating changelog since tag: $LATEST_TAG"
+            CHANGELOG=$(git log ${LATEST_TAG}..HEAD \
+              --pretty=format:"- %s (%h)" --reverse)
+          fi
+
+          # Create changelog content
+          {
+            echo "# Changes in ${{ steps.version.outputs.version }}"
+            echo ""
+            if [ -n "$CHANGELOG" ]; then
+              echo "$CHANGELOG"
+            else
+              echo "- No changes since last release"
+            fi
+            echo ""
+            echo "## Installation"
+            echo ""
+            echo "Download the appropriate installer for your platform:"
+            echo "- **Windows**: \`Project Time Tracker Setup ${{ steps.version.outputs.version }}.exe\`"
+            echo "- **macOS**: \`Project Time Tracker-${{ steps.version.outputs.version }}.dmg\`"
+            echo "- **Linux**: \`Project Time Tracker-${{ steps.version.outputs.version }}.AppImage\`"
+          } > changelog.md
+
+      - name: Create tag
+        if: |
+          steps.check_tag.outputs.exists == 'false' &&
+          steps.check_commits.outputs.has_commits == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.version }}" \
+            -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create draft release
+        if: |
+          steps.check_tag.outputs.exists == 'false' &&
+          steps.check_commits.outputs.has_commits == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            --title "Release ${{ steps.version.outputs.version }}" \
+            --notes-file changelog.md \
+            --draft
