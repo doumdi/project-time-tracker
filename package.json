@@ -1,6 +1,6 @@
 {
   "name": "project-time-tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple time tracking per project",
   "main": "src/main.js",
   "homepage": "./",
@@ -9,6 +9,8 @@
     "build": "webpack --mode production",
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=1 electron .",
+    "update-version": "node scripts/update-version.js",
+    "predist": "npm run update-version",
     "dist": "electron-builder",
     "pack": "electron-builder --dir",
     "dev": "concurrently \"npm start\" \"wait-on http://localhost:8080 && npm run electron-dev\""
@@ -24,14 +26,18 @@
       "dist/**/*",
       "node_modules/**/*"
     ],
+    "artifactName": "${productName}-${version}.${ext}",
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "${productName} Setup ${version}.${ext}"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "artifactName": "${productName}-${version}.${ext}"
     }
   },
   "keywords": [
@@ -44,7 +50,6 @@
   "dependencies": {
     "chart.js": "^4.5.0",
     "date-fns": "^4.1.0",
-    "electron": "^37.1.0",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
@@ -56,6 +61,7 @@
     "babel-loader": "^10.0.0",
     "concurrently": "^9.2.0",
     "css-loader": "^7.1.2",
+    "electron": "^37.1.0",
     "electron-builder": "^26.0.12",
     "html-webpack-plugin": "^5.6.3",
     "style-loader": "^4.0.0",
