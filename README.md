@@ -115,6 +115,9 @@ src/
 - `name` - Project name (unique)
 - `description` - Optional description
 - `color` - Hex color code
+- `budget` - Project budget (decimal)
+- `start_date` - Project start date
+- `end_date` - Project end date
 - `created_at`, `updated_at` - Timestamps
 
 **Time Entries Table**

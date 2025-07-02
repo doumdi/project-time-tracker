@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 2;
+const CURRENT_DB_VERSION = 3;
 
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
@@ -263,6 +263,47 @@ function applyMigration(version) {
         });
         return; // Exit early since we handle the async logic above
         break;
+      case 3:
+        // Version 3: Add start_date and end_date columns to projects table
+        console.log('Migration v3: Adding start_date and end_date columns to projects table');
+        
+        db.all("PRAGMA table_info(projects)", (err, columns) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          const startDateExists = columns.some(col => col.name === 'start_date');
+          const endDateExists = columns.some(col => col.name === 'end_date');
+          
+          let migrations = [];
+          
+          if (!startDateExists) {
+            migrations.push('ALTER TABLE projects ADD COLUMN start_date DATE;');
+          }
+          
+          if (!endDateExists) {
+            migrations.push('ALTER TABLE projects ADD COLUMN end_date DATE;');
+          }
+          
+          if (migrations.length === 0) {
+            console.log('Start date and end date columns already exist, skipping migration');
+            resolve();
+          } else {
+            const migrationSql = migrations.join('\n');
+            db.exec(migrationSql, (err) => {
+              if (err) {
+                console.error(`Migration v3 failed:`, err);
+                reject(err);
+              } else {
+                console.log(`Migration v3 completed successfully`);
+                resolve();
+              }
+            });
+          }
+        });
+        return; // Exit early since we handle the async logic above
+        break;
       default:
         console.log(`No migration defined for version ${version}`);
         resolve();
@@ -310,12 +351,14 @@ function getProjects() {
 
 function addProject(project) {
   return new Promise((resolve, reject) => {
-    const sql = 'INSERT INTO projects (name, description, color, budget) VALUES (?, ?, ?, ?)';
+    const sql = 'INSERT INTO projects (name, description, color, budget, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)';
     const params = [
       project.name, 
       project.description || '', 
       project.color || '#4CAF50',
-      project.budget || 0
+      project.budget || 0,
+      project.start_date || null,
+      project.end_date || null
     ];
     
     db.run(sql, params, function(err) {
@@ -330,12 +373,14 @@ function addProject(project) {
 
 function updateProject(project) {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE projects SET name = ?, description = ?, color = ?, budget = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const sql = 'UPDATE projects SET name = ?, description = ?, color = ?, budget = ?, start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     const params = [
       project.name, 
       project.description, 
       project.color, 
       project.budget || 0,
+      project.start_date || null,
+      project.end_date || null,
       project.id
     ];
     
