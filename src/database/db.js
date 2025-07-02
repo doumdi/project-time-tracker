@@ -3,6 +3,19 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 
+// Read version from version.json
+const versionFilePath = path.join(__dirname, '../../version.json');
+let appVersion = '1.0.0'; // fallback
+try {
+  const versionData = JSON.parse(fs.readFileSync(versionFilePath, 'utf8'));
+  appVersion = `${versionData.major}.${versionData.minor}.${versionData.micro}`;
+} catch (err) {
+  console.warn('Could not read version.json, using fallback version:', appVersion);
+}
+
+// Current database version - increment this when schema changes
+const CURRENT_DB_VERSION = 1;
+
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
 const dbPath = path.join(userDataPath, 'timetracker.db');
@@ -17,13 +30,23 @@ let db;
 // Initialize database
 function initDatabase() {
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
+    db = new sqlite3.Database(dbPath, async (err) => {
       if (err) {
         console.error('Error opening database:', err);
         reject(err);
       } else {
         console.log('Connected to SQLite database at:', dbPath);
-        createTables().then(resolve).catch(reject);
+        try {
+          await createTables();
+          const upgradeOccurred = await runMigrations();
+          if (upgradeOccurred) {
+            console.log('Database has been upgraded to the latest version.');
+          }
+          resolve();
+        } catch (migrationErr) {
+          console.error('Database initialization failed:', migrationErr);
+          reject(migrationErr);
+        }
       }
     });
   });
@@ -32,6 +55,14 @@ function initDatabase() {
 // Create tables if they don't exist
 function createTables() {
   return new Promise((resolve, reject) => {
+    const createMetadataTable = `
+      CREATE TABLE IF NOT EXISTS app_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     const createProjectsTable = `
       CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +89,15 @@ function createTables() {
     `;
 
     db.serialize(() => {
+      // Create metadata table first
+      db.run(createMetadataTable, (err) => {
+        if (err) {
+          console.error('Error creating app_metadata table:', err);
+          reject(err);
+          return;
+        }
+      });
+
       db.run(createProjectsTable, (err) => {
         if (err) {
           console.error('Error creating projects table:', err);
@@ -75,6 +115,127 @@ function createTables() {
         resolve();
       });
     });
+  });
+}
+
+// Version management functions
+function getDatabaseVersion() {
+  return new Promise((resolve, reject) => {
+    const sql = 'SELECT value FROM app_metadata WHERE key = ?';
+    db.get(sql, ['database_version'], (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row ? parseInt(row.value) : 0);
+      }
+    });
+  });
+}
+
+function setDatabaseVersion(version) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT OR REPLACE INTO app_metadata (key, value, updated_at) 
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `;
+    db.run(sql, ['database_version', version.toString()], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+function getAppVersion() {
+  return appVersion;
+}
+
+function setAppVersionInDb(version) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT OR REPLACE INTO app_metadata (key, value, updated_at) 
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `;
+    db.run(sql, ['app_version', version], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+// Database migration system
+function runMigrations() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const currentDbVersion = await getDatabaseVersion();
+      console.log(`Current database version: ${currentDbVersion}, Target version: ${CURRENT_DB_VERSION}`);
+      
+      if (currentDbVersion < CURRENT_DB_VERSION) {
+        console.log('Database upgrade needed. Running migrations...');
+        
+        // Run migrations from current version to target version
+        for (let version = currentDbVersion + 1; version <= CURRENT_DB_VERSION; version++) {
+          console.log(`Applying migration to version ${version}`);
+          await applyMigration(version);
+        }
+        
+        // Update database version
+        await setDatabaseVersion(CURRENT_DB_VERSION);
+        await setAppVersionInDb(appVersion);
+        
+        console.log(`Database upgraded successfully to version ${CURRENT_DB_VERSION}`);
+        
+        // Notify about upgrade (in a real app, this would be shown in UI)
+        console.log('DATABASE UPGRADE COMPLETE: Your database has been upgraded to the latest version.');
+        
+        resolve(true); // Return true to indicate upgrade occurred
+      } else {
+        // Update app version in case it changed
+        await setAppVersionInDb(appVersion);
+        resolve(false); // Return false to indicate no upgrade needed
+      }
+    } catch (err) {
+      console.error('Migration failed:', err);
+      reject(err);
+    }
+  });
+}
+
+function applyMigration(version) {
+  return new Promise((resolve, reject) => {
+    // Define migrations for each version
+    let migrationSql = '';
+    
+    switch (version) {
+      case 1:
+        // Version 1: Initial version, no migration needed as tables are already created
+        console.log('Migration v1: Initial database structure');
+        resolve();
+        return;
+      default:
+        console.log(`No migration defined for version ${version}`);
+        resolve();
+        return;
+    }
+    
+    if (migrationSql) {
+      db.exec(migrationSql, (err) => {
+        if (err) {
+          console.error(`Migration v${version} failed:`, err);
+          reject(err);
+        } else {
+          console.log(`Migration v${version} completed successfully`);
+          resolve();
+        }
+      });
+    } else {
+      resolve();
+    }
   });
 }
 
@@ -308,5 +469,7 @@ module.exports = {
   addTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
-  getTimeSummary
+  getTimeSummary,
+  getDatabaseVersion,
+  getAppVersion
 };
