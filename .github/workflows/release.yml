@@ -105,13 +105,25 @@ jobs:
               echo "- No changes since last release"
             fi
             echo ""
-            echo "## Installation"
+            echo "## Source Code"
             echo ""
-            echo "Download the appropriate installer for your platform:"
-            echo "- **Windows**: \`Project Time Tracker Setup ${{ steps.version.outputs.version }}.exe\`"
-            echo "- **macOS**: \`Project Time Tracker-${{ steps.version.outputs.version }}.dmg\`"
-            echo "- **Linux**: \`Project Time Tracker-${{ steps.version.outputs.version }}.AppImage\`"
+            echo "- **Source Archive**: \`project-time-tracker-${{ steps.version.outputs.version }}-source.zip\`"
+            echo "- **GitHub automatically provides**: \`Source code (zip)\` and \`Source code (tar.gz)\`"
           } > changelog.md
+
+      - name: Create source archive
+        if: |
+          steps.check_tag.outputs.exists == 'false' &&
+          steps.check_commits.outputs.has_commits == 'true'
+        run: |
+          # Create source archive excluding .git and node_modules
+          zip -r "project-time-tracker-${{ steps.version.outputs.version }}-source.zip" . \
+            -x "*.git*" \
+            -x "*node_modules*" \
+            -x "*.DS_Store*" \
+            -x "*dist/*" \
+            -x "*build/*" \
+            -x "*.log"
 
       - name: Create tag and draft release
         if: |
@@ -124,13 +136,5 @@ jobs:
             --title "Release ${{ steps.version.outputs.version }}" \
             --notes-file changelog.md \
             --draft \
-            --target main
-
-      - name: Create draft release
-        if: |
-          steps.check_tag.outputs.exists == 'false' &&
-          steps.check_commits.outputs.has_commits == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Draft release created with tag ${{ steps.version.outputs.version }}"
+            --target main \
+            "project-time-tracker-${{ steps.version.outputs.version }}-source.zip"
