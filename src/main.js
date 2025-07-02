@@ -84,3 +84,11 @@ ipcMain.handle('delete-time-entry', async (event, id) => {
 ipcMain.handle('get-time-summary', async (event, filters) => {
   return await database.getTimeSummary(filters);
 });
+
+ipcMain.handle('get-database-version', async () => {
+  return await database.getDatabaseVersion();
+});
+
+ipcMain.handle('get-app-version', async () => {
+  return database.getAppVersion();
+});

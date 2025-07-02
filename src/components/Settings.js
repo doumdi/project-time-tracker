@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -13,6 +13,26 @@ const Settings = () => {
   } = useSettings();
   
   const [localHourlyRate, setLocalHourlyRate] = useState(hourlyRate.toString());
+  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [databaseVersion, setDatabaseVersion] = useState(1);
+
+  // Load version information
+  useEffect(() => {
+    const loadVersions = async () => {
+      try {
+        if (window.electronAPI) {
+          const appVer = await window.electronAPI.getAppVersion();
+          const dbVer = await window.electronAPI.getDatabaseVersion();
+          setAppVersion(appVer);
+          setDatabaseVersion(dbVer);
+        }
+      } catch (err) {
+        console.error('Error loading versions:', err);
+      }
+    };
+    
+    loadVersions();
+  }, []);
 
   const handleLanguageChange = (e) => {
     const newLanguage = e.target.value;
@@ -102,7 +122,10 @@ const Settings = () => {
             {t('app.title')}
           </h3>
           <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
-            Version 1.0.0
+            App Version: {appVersion}
+          </p>
+          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
+            Database Version: {databaseVersion}
           </p>
           <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
             Built with Electron and React
