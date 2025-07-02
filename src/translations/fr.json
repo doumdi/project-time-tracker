@@ -43,6 +43,8 @@
     "color": "Couleur",
     "budget": "Budget",
     "budgetPlaceholder": "Budget maximum autorisé",
+    "startDate": "Date de Début",
+    "endDate": "Date de Fin",
     "remainingBudget": "Budget Restant",
     "remainingHours": "Heures Restantes",
     "addProject": "Ajouter un Projet",

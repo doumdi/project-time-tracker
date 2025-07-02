@@ -11,7 +11,9 @@ const ProjectManager = ({ projects, onRefresh }) => {
     name: '',
     description: '',
     color: '#4CAF50',
-    budget: ''
+    budget: '',
+    start_date: '',
+    end_date: ''
   });
 
   const colors = [
@@ -25,7 +27,9 @@ const ProjectManager = ({ projects, onRefresh }) => {
         name: editingProject.name,
         description: editingProject.description || '',
         color: editingProject.color || '#4CAF50',
-        budget: editingProject.budget || ''
+        budget: editingProject.budget || '',
+        start_date: editingProject.start_date || '',
+        end_date: editingProject.end_date || ''
       });
       setShowForm(true);
     }
@@ -51,7 +55,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
         alert(t('projects.projectAdded'));
       }
       
-      setFormData({ name: '', description: '', color: '#4CAF50', budget: '' });
+      setFormData({ name: '', description: '', color: '#4CAF50', budget: '', start_date: '', end_date: '' });
       setShowForm(false);
       setEditingProject(null);
       onRefresh();
@@ -80,7 +84,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', description: '', color: '#4CAF50', budget: '' });
+    setFormData({ name: '', description: '', color: '#4CAF50', budget: '', start_date: '', end_date: '' });
     setShowForm(false);
     setEditingProject(null);
   };
@@ -158,6 +162,26 @@ const ProjectManager = ({ projects, onRefresh }) => {
             </div>
 
             <div className="form-group">
+              <label className="form-label">{t('projects.startDate')}</label>
+              <input
+                type="date"
+                className="form-input"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('projects.endDate')}</label>
+              <input
+                type="date"
+                className="form-input"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
               <label className="form-label">{t('projects.color')}</label>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                 {colors.map(color => (
@@ -201,6 +225,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
                 <tr>
                   <th>{t('entries.project')}</th>
                   <th>{t('entries.description')}</th>
+                  <th>{t('projects.startDate')}</th>
+                  <th>{t('projects.endDate')}</th>
                   <th>{t('projects.totalTime')}</th>
                   <th>{t('projects.budget')}</th>
                   <th>{t('projects.remainingHours')}</th>
@@ -227,6 +253,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
                       </div>
                     </td>
                     <td>{project.description || '-'}</td>
+                    <td>{project.start_date || '-'}</td>
+                    <td>{project.end_date || '-'}</td>
                     <td>{formatTime(project.total_minutes || 0)}</td>
                     <td>{project.budget ? formatMoney(project.budget) : '-'}</td>
                     <td>{project.budget && project.budget > 0 ? `${remainingHours.toFixed(1)}h` : '-'}</td>
