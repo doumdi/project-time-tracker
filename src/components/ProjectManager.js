@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 const ProjectManager = ({ projects, onRefresh }) => {
   const { t } = useLanguage();
+  const { hourlyRate, formatMoney, calculateEarnings } = useSettings();
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: '#4CAF50'
+    color: '#4CAF50',
+    budget: ''
   });
 
   const colors = [
@@ -21,7 +24,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
       setFormData({
         name: editingProject.name,
         description: editingProject.description || '',
-        color: editingProject.color || '#4CAF50'
+        color: editingProject.color || '#4CAF50',
+        budget: editingProject.budget || ''
       });
       setShowForm(true);
     }
@@ -47,7 +51,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
         alert(t('projects.projectAdded'));
       }
       
-      setFormData({ name: '', description: '', color: '#4CAF50' });
+      setFormData({ name: '', description: '', color: '#4CAF50', budget: '' });
       setShowForm(false);
       setEditingProject(null);
       onRefresh();
@@ -76,7 +80,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', description: '', color: '#4CAF50' });
+    setFormData({ name: '', description: '', color: '#4CAF50', budget: '' });
     setShowForm(false);
     setEditingProject(null);
   };
@@ -85,6 +89,18 @@ const ProjectManager = ({ projects, onRefresh }) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}${t('common.hours')} ${mins}${t('common.minutes')}`;
+  };
+
+  const calculateRemainingBudgetAndHours = (project) => {
+    if (!project.budget || project.budget <= 0) {
+      return { remainingBudget: 0, remainingHours: 0 };
+    }
+    
+    const totalEarnings = calculateEarnings(project.total_minutes || 0);
+    const remainingBudget = Math.max(0, project.budget - totalEarnings);
+    const remainingHours = hourlyRate > 0 ? remainingBudget / hourlyRate : 0;
+    
+    return { remainingBudget, remainingHours };
   };
 
   return (
@@ -125,6 +141,19 @@ const ProjectManager = ({ projects, onRefresh }) => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('projects.descriptionPlaceholder')}
                 rows="3"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('projects.budget')}</label>
+              <input
+                type="number"
+                className="form-input"
+                value={formData.budget}
+                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                placeholder={t('projects.budgetPlaceholder')}
+                min="0"
+                step="0.01"
               />
             </div>
 
@@ -173,12 +202,16 @@ const ProjectManager = ({ projects, onRefresh }) => {
                   <th>{t('entries.project')}</th>
                   <th>{t('entries.description')}</th>
                   <th>{t('projects.totalTime')}</th>
+                  <th>{t('projects.budget')}</th>
+                  <th>{t('projects.remainingHours')}</th>
                   <th>{t('projects.entries')}</th>
                   <th>{t('entries.actions')}</th>
                 </tr>
               </thead>
               <tbody>
-                {projects.map(project => (
+                {projects.map(project => {
+                  const { remainingBudget, remainingHours } = calculateRemainingBudgetAndHours(project);
+                  return (
                   <tr key={project.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -195,6 +228,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
                     </td>
                     <td>{project.description || '-'}</td>
                     <td>{formatTime(project.total_minutes || 0)}</td>
+                    <td>{project.budget ? formatMoney(project.budget) : '-'}</td>
+                    <td>{project.budget && project.budget > 0 ? `${remainingHours.toFixed(1)}h` : '-'}</td>
                     <td>{project.entry_count || 0}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -213,7 +248,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

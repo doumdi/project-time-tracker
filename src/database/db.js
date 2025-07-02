@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 1;
+const CURRENT_DB_VERSION = 2;
 
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
@@ -26,9 +26,14 @@ if (!fs.existsSync(userDataPath)) {
 }
 
 let db;
+let isInitialized = false;
 
 // Initialize database
 function initDatabase() {
+  if (isInitialized) {
+    return Promise.resolve();
+  }
+  
   return new Promise((resolve, reject) => {
     db = new sqlite3.Database(dbPath, async (err) => {
       if (err) {
@@ -42,6 +47,7 @@ function initDatabase() {
           if (upgradeOccurred) {
             console.log('Database has been upgraded to the latest version.');
           }
+          isInitialized = true;
           resolve();
         } catch (migrationErr) {
           console.error('Database initialization failed:', migrationErr);
@@ -217,6 +223,46 @@ function applyMigration(version) {
         console.log('Migration v1: Initial database structure');
         resolve();
         return;
+      case 2:
+        // Version 2: Add budget column to projects table
+        console.log('Migration v2: Adding budget column to projects table');
+        migrationSql = `
+          ALTER TABLE projects ADD COLUMN budget DECIMAL(10,2) DEFAULT 0;
+        `;
+        // Use a different approach - check if column exists first
+        db.get("PRAGMA table_info(projects)", (err, result) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          // Check if budget column already exists
+          db.all("PRAGMA table_info(projects)", (err, columns) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            
+            const budgetColumnExists = columns.some(col => col.name === 'budget');
+            
+            if (budgetColumnExists) {
+              console.log('Budget column already exists, skipping migration');
+              resolve();
+            } else {
+              db.exec(migrationSql, (err) => {
+                if (err) {
+                  console.error(`Migration v2 failed:`, err);
+                  reject(err);
+                } else {
+                  console.log(`Migration v2 completed successfully`);
+                  resolve();
+                }
+              });
+            }
+          });
+        });
+        return; // Exit early since we handle the async logic above
+        break;
       default:
         console.log(`No migration defined for version ${version}`);
         resolve();
@@ -264,8 +310,13 @@ function getProjects() {
 
 function addProject(project) {
   return new Promise((resolve, reject) => {
-    const sql = 'INSERT INTO projects (name, description, color) VALUES (?, ?, ?)';
-    const params = [project.name, project.description || '', project.color || '#4CAF50'];
+    const sql = 'INSERT INTO projects (name, description, color, budget) VALUES (?, ?, ?, ?)';
+    const params = [
+      project.name, 
+      project.description || '', 
+      project.color || '#4CAF50',
+      project.budget || 0
+    ];
     
     db.run(sql, params, function(err) {
       if (err) {
@@ -279,8 +330,14 @@ function addProject(project) {
 
 function updateProject(project) {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE projects SET name = ?, description = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-    const params = [project.name, project.description, project.color, project.id];
+    const sql = 'UPDATE projects SET name = ?, description = ?, color = ?, budget = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      project.name, 
+      project.description, 
+      project.color, 
+      project.budget || 0,
+      project.id
+    ];
     
     db.run(sql, params, function(err) {
       if (err) {
