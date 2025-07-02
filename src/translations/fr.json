@@ -122,6 +122,10 @@
     "selectLanguage": "Sélectionner la Langue",
     "english": "English",
     "french": "Français",
+    "hourlyRate": "Taux Horaire",
+    "currency": "Devise",
+    "enterHourlyRate": "Entrez votre taux horaire",
+    "selectCurrency": "Sélectionnez votre devise",
     "settingsSaved": "Paramètres enregistrés !"
   },
   "common": {

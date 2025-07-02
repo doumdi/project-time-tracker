@@ -122,6 +122,10 @@
     "selectLanguage": "Select Language",
     "english": "English",
     "french": "Français",
+    "hourlyRate": "Hourly Rate",
+    "currency": "Currency",
+    "enterHourlyRate": "Enter your hourly rate",
+    "selectCurrency": "Select your currency",
     "settingsSaved": "Settings saved!"
   },
   "common": {
