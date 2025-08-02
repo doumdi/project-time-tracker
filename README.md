@@ -25,12 +25,18 @@ Author(s) :
 ### Projects
 ![docs/images/Projects.png](docs/images/Projects.png)
 
+### Office Presence
+![Office Presence Real-time Tracking](https://github.com/user-attachments/assets/38fa1926-7467-41c9-88dd-2f64590621e9)
+
 ## Features
 
 - ✅ **Cross-platform** - Works on Windows, macOS, and Linux
 - ✅ **Project Management** - Add, edit, and delete projects with custom colors
 - ✅ **Time Tracking** - Live timer with 5-minute precision rounding
 - ✅ **Quick Entry** - Add past time entries manually
+- ✅ **Office Presence Detection** - Automatic presence tracking using Bluetooth Low Energy (BLE) devices
+- ✅ **Real-time BLE Monitoring** - Continuous scanning for registered devices with live status updates
+- ✅ **Automatic Session Management** - Creates/ends presence sessions based on device proximity
 - ✅ **Filtering & Search** - Filter time entries by project, date, and description
 - ✅ **Multiple Views** - Table view, calendar view (month/week/day), and charts
 - ✅ **Charts & Analytics** - Visual representations of time data
@@ -43,6 +49,7 @@ Author(s) :
 - **React** - Modern UI library
 - **SQLite** - Local database for data storage
 - **Chart.js** - Charts and visualizations
+- **@stoprocent/noble** - Bluetooth Low Energy (BLE) device detection
 - **Webpack** - Build tool
 
 ## Installation & Setup
@@ -88,15 +95,26 @@ Author(s) :
 
 1. **Create Projects**: Start by adding your projects in the "Projects" tab
 2. **Track Time**: Use the "Time Tracker" tab to start/stop timer or add quick entries
-3. **View Entries**: Check all your time entries in the "Time Entries" tab
-4. **Calendar View**: See your work schedule in the "Calendar" tab
-5. **Analytics**: View charts and statistics in the "Charts" tab
+3. **Configure BLE Devices**: (Optional) Set up Bluetooth devices for automatic office presence detection in Settings
+4. **View Entries**: Check all your time entries in the "Time Entries" tab
+5. **Office Presence**: Monitor automatic presence detection in the "Office Presence" tab
+6. **Calendar View**: See your work schedule in the "Calendar" tab
+7. **Analytics**: View charts and statistics in the "Charts" tab
 
 ### Time Tracking
 
 - **Live Timer**: Select a project and click "Start Timer" to begin tracking
 - **Quick Entry**: Toggle "Quick Entry Mode" to add past work manually
 - **5-minute Precision**: All durations are rounded to the nearest 5 minutes
+
+### Office Presence Detection
+
+- **Automatic Tracking**: Enable BLE device monitoring in Settings to track office presence automatically
+- **Real-time Monitoring**: Continuous scanning for registered Bluetooth devices (watches, phones, etc.)
+- **Smart Sessions**: Automatically creates presence sessions when devices are detected, ends when devices are out of range (2-minute timeout)
+- **Minimum Session Time**: Only sessions 1 minute or longer are saved
+- **Live Status**: See real-time presence status and currently detected devices
+- **Daily Summaries**: View cumulative presence time for each day
 
 ### Data Management
 
@@ -124,7 +142,10 @@ src/
 │   ├── TimeTracker.js
 │   ├── TimeEntryList.js
 │   ├── CalendarView.js
-│   └── ChartsView.js
+│   ├── ChartsView.js
+│   ├── OfficePresenceView.js  # Office presence tracking
+│   ├── BleDevicesView.js      # BLE device management
+│   └── Settings.js
 ├── database/           # Database operations
 │   └── db.js          # SQLite database interface
 ├── main.js            # Electron main process
@@ -152,6 +173,23 @@ src/
 - `duration` - Duration in minutes
 - `created_at`, `updated_at` - Timestamps
 
+**BLE Devices Table** (v4+)
+- `id` - Primary key
+- `name` - Device display name
+- `address` - Bluetooth MAC address (unique)
+- `device_type` - Device type (watch, phone, etc.)
+- `is_active` - Whether device is enabled for monitoring
+- `created_at`, `updated_at` - Timestamps
+
+**Office Presence Table** (v4+)
+- `id` - Primary key
+- `date` - Presence date
+- `start_time` - Session start time (ISO datetime)
+- `end_time` - Session end time (ISO datetime)
+- `duration` - Session duration in minutes
+- `device_id` - Foreign key to BLE devices (optional)
+- `created_at`, `updated_at` - Timestamps
+
 ## Building for Distribution
 
 ### Windows
@@ -171,6 +209,31 @@ npm run dist
 npm run dist
 # Creates: dist/Project Time Tracker-1.0.0.AppImage
 ```
+
+## Troubleshooting
+
+### BLE (Bluetooth Low Energy) Issues
+
+**macOS:**
+- Ensure Bluetooth is enabled in System Preferences
+- Grant Bluetooth permission to the app when prompted
+- If installation fails with Python 3.13+, the app now uses `@stoprocent/noble` for better compatibility
+- Install Xcode command line tools if needed: `xcode-select --install`
+
+**Windows:**
+- Enable Bluetooth in Windows Settings
+- Ensure the app has Bluetooth permissions
+- Some USB Bluetooth adapters may not support BLE
+
+**Linux:**
+- Install required packages: `sudo apt-get install bluetooth bluez libbluetooth-dev libudev-dev`
+- Ensure your user is in the `bluetooth` group: `sudo usermod -a -G bluetooth $USER`
+- Restart after adding to the group
+
+**General:**
+- BLE features are optional - the app works fully without them
+- If BLE is not available, presence tracking will be disabled
+- Check that your Bluetooth adapter supports BLE (Bluetooth 4.0+)
 
 ## License
 

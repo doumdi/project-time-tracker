@@ -216,6 +216,18 @@ const Settings = () => {
               <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
                 Built with Electron and React
               </p>
+              <p style={{ margin: '1rem 0 0 0', fontSize: '0.9rem' }}>
+                <a 
+                  href="https://github.com/doumdi/project-time-tracker" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#007bff', textDecoration: 'none' }}
+                  onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                  onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                >
+                  GitHub Repository
+                </a>
+              </p>
             </div>
           </div>
         </div>
