@@ -20,5 +20,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Version operations
   getDatabaseVersion: () => ipcRenderer.invoke('get-database-version'),
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
+  // BLE device operations
+  getBleDevices: () => ipcRenderer.invoke('get-ble-devices'),
+  addBleDevice: (device) => ipcRenderer.invoke('add-ble-device', device),
+  updateBleDevice: (device) => ipcRenderer.invoke('update-ble-device', device),
+  deleteBleDevice: (id) => ipcRenderer.invoke('delete-ble-device', id),
+  
+  // Office presence operations
+  getOfficePresence: (filters) => ipcRenderer.invoke('get-office-presence', filters),
+  addOfficePresence: (presence) => ipcRenderer.invoke('add-office-presence', presence),
+  updateOfficePresence: (presence) => ipcRenderer.invoke('update-office-presence', presence),
+  deleteOfficePresence: (id) => ipcRenderer.invoke('delete-office-presence', id),
+  getOfficePresenceSummary: (filters) => ipcRenderer.invoke('get-office-presence-summary', filters),
+  
+  // BLE scanning operations
+  startBleScan: () => ipcRenderer.invoke('start-ble-scan'),
+  stopBleScan: () => ipcRenderer.invoke('stop-ble-scan'),
+  getDiscoveredDevices: () => ipcRenderer.invoke('get-discovered-devices'),
+  
+  // Event listeners for BLE events
+  onBleDeviceDiscovered: (callback) => ipcRenderer.on('ble-device-discovered', callback),
+  onBleScanStopped: (callback) => ipcRenderer.on('ble-scan-stopped', callback),
+  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 });

@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 3;
+const CURRENT_DB_VERSION = 4;
 
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
@@ -304,6 +304,59 @@ function applyMigration(version) {
         });
         return; // Exit early since we handle the async logic above
         break;
+      case 4:
+        // Version 4: Add office presence and BLE devices tables
+        console.log('Migration v4: Adding office presence and BLE devices tables');
+        
+        const createBleDevicesTable = `
+          CREATE TABLE IF NOT EXISTS ble_devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            mac_address TEXT UNIQUE NOT NULL,
+            device_type TEXT DEFAULT 'unknown',
+            is_enabled BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        `;
+        
+        const createOfficePresenceTable = `
+          CREATE TABLE IF NOT EXISTS office_presence (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATE NOT NULL,
+            start_time DATETIME NOT NULL,
+            end_time DATETIME,
+            duration INTEGER NOT NULL, -- Duration in minutes
+            device_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
+          );
+        `;
+        
+        db.serialize(() => {
+          db.run(createBleDevicesTable, (err) => {
+            if (err) {
+              console.error(`Migration v4 failed (ble_devices table):`, err);
+              reject(err);
+              return;
+            }
+            console.log('BLE devices table created successfully');
+          });
+          
+          db.run(createOfficePresenceTable, (err) => {
+            if (err) {
+              console.error(`Migration v4 failed (office_presence table):`, err);
+              reject(err);
+              return;
+            }
+            console.log('Office presence table created successfully');
+            console.log(`Migration v4 completed successfully`);
+            resolve();
+          });
+        });
+        return;
+        break;
       default:
         console.log(`No migration defined for version ${version}`);
         resolve();
@@ -551,6 +604,215 @@ function getTimeSummary(filters = {}) {
   });
 }
 
+// BLE device operations
+function getBleDevices() {
+  return new Promise((resolve, reject) => {
+    const sql = 'SELECT * FROM ble_devices ORDER BY name';
+    
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
+function addBleDevice(device) {
+  return new Promise((resolve, reject) => {
+    const sql = 'INSERT INTO ble_devices (name, mac_address, device_type, is_enabled) VALUES (?, ?, ?, ?)';
+    const params = [
+      device.name,
+      device.mac_address,
+      device.device_type || 'unknown',
+      device.is_enabled !== undefined ? device.is_enabled : true
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ id: this.lastID, ...device });
+      }
+    });
+  });
+}
+
+function updateBleDevice(device) {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE ble_devices SET name = ?, mac_address = ?, device_type = ?, is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      device.name,
+      device.mac_address,
+      device.device_type,
+      device.is_enabled,
+      device.id
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(device);
+      }
+    });
+  });
+}
+
+function deleteBleDevice(id) {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM ble_devices WHERE id = ?';
+    
+    db.run(sql, [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ deleted: this.changes > 0 });
+      }
+    });
+  });
+}
+
+// Office presence operations
+function getOfficePresence(filters = {}) {
+  return new Promise((resolve, reject) => {
+    let sql = `
+      SELECT op.*, bd.name as device_name
+      FROM office_presence op
+      LEFT JOIN ble_devices bd ON op.device_id = bd.id
+    `;
+    
+    const conditions = [];
+    const params = [];
+    
+    if (filters.date) {
+      conditions.push('date(op.date) = date(?)');
+      params.push(filters.date);
+    }
+    
+    if (filters.startDate) {
+      conditions.push('date(op.date) >= date(?)');
+      params.push(filters.startDate);
+    }
+    
+    if (filters.endDate) {
+      conditions.push('date(op.date) <= date(?)');
+      params.push(filters.endDate);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    sql += ' ORDER BY op.date DESC, op.start_time DESC';
+    
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
+function addOfficePresence(presence) {
+  return new Promise((resolve, reject) => {
+    const sql = 'INSERT INTO office_presence (date, start_time, end_time, duration, device_id) VALUES (?, ?, ?, ?, ?)';
+    const params = [
+      presence.date,
+      presence.start_time,
+      presence.end_time,
+      presence.duration,
+      presence.device_id || null
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ id: this.lastID, ...presence });
+      }
+    });
+  });
+}
+
+function updateOfficePresence(presence) {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE office_presence SET date = ?, start_time = ?, end_time = ?, duration = ?, device_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      presence.date,
+      presence.start_time,
+      presence.end_time,
+      presence.duration,
+      presence.device_id,
+      presence.id
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(presence);
+      }
+    });
+  });
+}
+
+function deleteOfficePresence(id) {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM office_presence WHERE id = ?';
+    
+    db.run(sql, [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ deleted: this.changes > 0 });
+      }
+    });
+  });
+}
+
+function getOfficePresenceSummary(filters = {}) {
+  return new Promise((resolve, reject) => {
+    let sql = `
+      SELECT 
+        date,
+        COUNT(*) as session_count,
+        SUM(duration) as total_minutes
+      FROM office_presence
+    `;
+    
+    const conditions = [];
+    const params = [];
+    
+    if (filters.startDate) {
+      conditions.push('date >= date(?)');
+      params.push(filters.startDate);
+    }
+    
+    if (filters.endDate) {
+      conditions.push('date <= date(?)');
+      params.push(filters.endDate);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    sql += ' GROUP BY date ORDER BY date DESC';
+    
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
 // Initialize database when module is loaded
 if (app && app.isReady()) {
   initDatabase();
@@ -573,5 +835,14 @@ module.exports = {
   deleteTimeEntry,
   getTimeSummary,
   getDatabaseVersion,
-  getAppVersion
+  getAppVersion,
+  getBleDevices,
+  addBleDevice,
+  updateBleDevice,
+  deleteBleDevice,
+  getOfficePresence,
+  addOfficePresence,
+  updateOfficePresence,
+  deleteOfficePresence,
+  getOfficePresenceSummary
 };
