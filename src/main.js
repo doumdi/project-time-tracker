@@ -52,7 +52,7 @@ const database = require('./database/db');
 let noble;
 let bleError = null;
 try {
-  noble = require('@abandonware/noble');
+  noble = require('@stoprocent/noble');
 } catch (err) {
   bleError = err;
   console.warn('Noble BLE library not available:', err.message);
@@ -160,9 +160,9 @@ ipcMain.handle('start-ble-scan', async () => {
       
       // Add platform-specific help
       if (process.platform === 'darwin') {
-        errorMessage += '\n\nOn macOS, please ensure:\n- Bluetooth is enabled in System Preferences\n- The app has Bluetooth permissions\n- You may need to install Xcode command line tools: xcode-select --install';
+        errorMessage += '\n\nOn macOS, please ensure:\n- Bluetooth is enabled in System Preferences\n- The app has Bluetooth permissions\n- Xcode command line tools are installed: xcode-select --install\n- If using Python 3.13+, you may need to install setuptools: pip install setuptools';
       } else if (process.platform === 'linux') {
-        errorMessage += '\n\nOn Linux, please ensure:\n- Bluetooth service is running\n- You have the necessary permissions\n- libbluetooth-dev is installed';
+        errorMessage += '\n\nOn Linux, please ensure:\n- Bluetooth service is running\n- You have the necessary permissions\n- libbluetooth-dev is installed\n- build-essential package is installed';
       } else if (process.platform === 'win32') {
         errorMessage += '\n\nOn Windows, please ensure:\n- Bluetooth is enabled\n- Windows Build Tools are installed: npm install --global windows-build-tools';
       }
