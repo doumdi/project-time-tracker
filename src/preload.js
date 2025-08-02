@@ -39,9 +39,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startBleScan: () => ipcRenderer.invoke('start-ble-scan'),
   stopBleScan: () => ipcRenderer.invoke('stop-ble-scan'),
   getDiscoveredDevices: () => ipcRenderer.invoke('get-discovered-devices'),
+  getCurrentPresenceStatus: () => ipcRenderer.invoke('get-current-presence-status'),
+  enablePresenceMonitoring: (enabled) => ipcRenderer.invoke('enable-presence-monitoring', enabled),
   
   // Event listeners for BLE events
   onBleDeviceDiscovered: (callback) => ipcRenderer.on('ble-device-discovered', callback),
   onBleScanStopped: (callback) => ipcRenderer.on('ble-scan-stopped', callback),
+  onPresenceStatusUpdated: (callback) => ipcRenderer.on('presence-status-updated', callback),
+  onPresenceDataUpdated: (callback) => ipcRenderer.on('presence-data-updated', callback),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 });

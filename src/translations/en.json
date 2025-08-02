@@ -172,7 +172,13 @@
     "today": "Today",
     "currentDay": "Current day data",
     "presenceDetected": "Presence detected for",
-    "totalPresenceToday": "Total presence today"
+    "totalPresenceToday": "Total presence today",
+    "totalPresenceDate": "Total presence for selected date",
+    "currentlyPresent": "Currently Present",
+    "currentlyAbsent": "Currently Absent",
+    "activeScanning": "Active Scanning",
+    "detectedDevices": "Detected Devices",
+    "todayTotal": "Today's Total"
   },
   "bleDevices": {
     "title": "BLE Device Configuration",

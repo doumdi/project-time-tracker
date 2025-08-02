@@ -8,10 +8,56 @@ const OfficePresenceView = ({ onRefresh }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentStatus, setCurrentStatus] = useState({
+    isPresent: false,
+    detectedDevices: [],
+    activeSession: null,
+    todayTotalMinutes: 0,
+    continuousScanning: false
+  });
 
   useEffect(() => {
     loadPresenceData();
+    loadCurrentStatus();
+    
+    // Set up real-time listeners
+    if (window.electronAPI) {
+      window.electronAPI.onPresenceStatusUpdated((event, status) => {
+        setCurrentStatus(prev => ({
+          ...prev,
+          isPresent: status.isPresent,
+          detectedDevices: status.detectedDevice ? [status.detectedDevice] : []
+        }));
+      });
+      
+      window.electronAPI.onPresenceDataUpdated(() => {
+        loadPresenceData();
+        loadCurrentStatus();
+      });
+    }
+    
+    // Refresh current status every 30 seconds
+    const statusInterval = setInterval(loadCurrentStatus, 30000);
+    
+    return () => {
+      clearInterval(statusInterval);
+      if (window.electronAPI) {
+        window.electronAPI.removeAllListeners('presence-status-updated');
+        window.electronAPI.removeAllListeners('presence-data-updated');
+      }
+    };
   }, [selectedDate]);
+
+  const loadCurrentStatus = async () => {
+    try {
+      if (window.electronAPI) {
+        const status = await window.electronAPI.getCurrentPresenceStatus();
+        setCurrentStatus(status);
+      }
+    } catch (error) {
+      console.error('Failed to load current status:', error);
+    }
+  };
 
   const loadPresenceData = async () => {
     setLoading(true);
@@ -53,6 +99,57 @@ const OfficePresenceView = ({ onRefresh }) => {
     return presenceData.reduce((total, entry) => total + (entry.duration || 0), 0);
   };
 
+  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+
+  const renderCurrentStatus = () => {
+    if (!isToday || !currentStatus.continuousScanning) return null;
+
+    return (
+      <div className="current-status-container">
+        <div className={`current-status ${currentStatus.isPresent ? 'present' : 'absent'}`}>
+          <div className="status-header">
+            <div className="status-indicator">
+              <div className={`status-dot ${currentStatus.isPresent ? 'online' : 'offline'}`}></div>
+              <span className="status-text">
+                {currentStatus.isPresent ? t('presence.currentlyPresent') : t('presence.currentlyAbsent')}
+              </span>
+            </div>
+            <div className="scanning-status">
+              <span className="scanning-text">{t('presence.activeScanning')}</span>
+            </div>
+          </div>
+          
+          {currentStatus.isPresent && currentStatus.detectedDevices.length > 0 && (
+            <div className="detected-devices">
+              <h4>{t('presence.detectedDevices')}</h4>
+              <div className="devices-list">
+                {currentStatus.detectedDevices.map((device, index) => (
+                  <div key={index} className="device-item">
+                    <span className="device-icon">
+                      {device.device_type === 'watch' ? '⌚' : 
+                       device.device_type === 'phone' ? '📱' : '📟'}
+                    </span>
+                    <span className="device-name">{device.name}</span>
+                    <span className="device-last-seen">
+                      {device.last_seen ? format(parseISO(device.last_seen), 'HH:mm:ss') : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {isToday && (
+            <div className="today-summary">
+              <span className="today-label">{t('presence.todayTotal')}</span>
+              <span className="today-time">{formatDuration(currentStatus.todayTotalMinutes)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fade-in">
       <div className="card">
@@ -81,10 +178,12 @@ const OfficePresenceView = ({ onRefresh }) => {
           </div>
         ) : (
           <>
+            {renderCurrentStatus()}
+            
             {summary && (
               <div className="presence-summary">
                 <div className="summary-card">
-                  <h3>{t('presence.totalPresenceToday')}</h3>
+                  <h3>{isToday ? t('presence.totalPresenceToday') : t('presence.totalPresenceDate')}</h3>
                   <div className="summary-stats">
                     <div className="stat">
                       <span className="stat-label">{t('presence.totalTime')}</span>
@@ -158,6 +257,167 @@ const OfficePresenceView = ({ onRefresh }) => {
         .badge-primary {
           background-color: #007bff;
           color: white;
+        }
+
+        .current-status-container {
+          margin: 1.5rem 0;
+        }
+
+        .current-status {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-radius: 12px;
+          padding: 1.5rem;
+          border: 2px solid #dee2e6;
+        }
+
+        .current-status.present {
+          background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+          border-color: #28a745;
+        }
+
+        .current-status.absent {
+          background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+          border-color: #dc3545;
+        }
+
+        .status-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .status-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          position: relative;
+        }
+
+        .status-dot.online {
+          background-color: #28a745;
+          box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-dot.offline {
+          background-color: #dc3545;
+          box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+        }
+
+        .status-dot.online::before {
+          content: '';
+          position: absolute;
+          top: -4px;
+          left: -4px;
+          right: -4px;
+          bottom: -4px;
+          border: 2px solid #28a745;
+          border-radius: 50%;
+          opacity: 0;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0% {
+            transform: scale(0.95);
+            opacity: 1;
+          }
+          70% {
+            transform: scale(1.1);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1.1);
+            opacity: 0;
+          }
+        }
+
+        .status-text {
+          font-weight: 600;
+          font-size: 1.1rem;
+          color: #333;
+        }
+
+        .scanning-status {
+          font-size: 0.875rem;
+          color: #666;
+        }
+
+        .scanning-text {
+          background: #007bff;
+          color: white;
+          padding: 0.25rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+        }
+
+        .detected-devices {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .detected-devices h4 {
+          margin: 0 0 0.75rem 0;
+          font-size: 0.95rem;
+          color: #555;
+        }
+
+        .devices-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .device-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.5rem;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 6px;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .device-icon {
+          font-size: 1.2rem;
+        }
+
+        .device-name {
+          font-weight: 500;
+          flex: 1;
+        }
+
+        .device-last-seen {
+          font-size: 0.75rem;
+          color: #666;
+          font-family: monospace;
+        }
+
+        .today-summary {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .today-label {
+          font-weight: 500;
+          color: #555;
+        }
+
+        .today-time {
+          font-size: 1.2rem;
+          font-weight: 600;
+          color: #007bff;
         }
 
         .presence-summary {

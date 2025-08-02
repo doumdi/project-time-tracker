@@ -63,14 +63,24 @@ const Settings = () => {
     alert(t('settings.settingsSaved'));
   };
 
-  const handleOfficePresenceToggle = (e) => {
+  const handleOfficePresenceToggle = async (e) => {
     const enabled = e.target.checked;
     setOfficePresenceEnabled(enabled);
     
-    // Store in localStorage for now
+    // Store in localStorage
     localStorage.setItem('officePresenceEnabled', enabled.toString());
     
-    alert(t('settings.settingsSaved'));
+    // Enable/disable presence monitoring via IPC
+    try {
+      await window.electronAPI.enablePresenceMonitoring(enabled);
+      alert(t('settings.settingsSaved'));
+    } catch (error) {
+      console.error('Failed to toggle presence monitoring:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+      // Revert the toggle state
+      setOfficePresenceEnabled(!enabled);
+      localStorage.setItem('officePresenceEnabled', (!enabled).toString());
+    }
   };
 
   const handleConfigureDevices = () => {
@@ -81,12 +91,25 @@ const Settings = () => {
     setShowBleDevices(false);
   };
 
-  // Load office presence setting
+  // Load office presence setting and initialize monitoring
   useEffect(() => {
-    const stored = localStorage.getItem('officePresenceEnabled');
-    if (stored) {
-      setOfficePresenceEnabled(stored === 'true');
-    }
+    const initializePresenceMonitoring = async () => {
+      const stored = localStorage.getItem('officePresenceEnabled');
+      const enabled = stored === 'true';
+      setOfficePresenceEnabled(enabled);
+      
+      // Initialize presence monitoring if enabled
+      if (enabled && window.electronAPI) {
+        try {
+          await window.electronAPI.enablePresenceMonitoring(true);
+          console.log('Presence monitoring initialized');
+        } catch (error) {
+          console.error('Failed to initialize presence monitoring:', error);
+        }
+      }
+    };
+    
+    initializePresenceMonitoring();
   }, []);
 
   return (

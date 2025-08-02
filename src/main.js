@@ -31,7 +31,20 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  
+  // Check if presence monitoring should be started
+  setTimeout(async () => {
+    try {
+      const stored = JSON.parse(JSON.stringify({}));
+      // We'll check localStorage in the renderer process instead
+      // For now, we'll let the renderer process control this
+    } catch (error) {
+      console.error('Error checking presence monitoring settings:', error);
+    }
+  }, 2000);
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -65,7 +78,11 @@ let bleState = {
   discoveredDevices: new Map(),
   connectedDevices: new Set(),
   presenceTimer: null,
-  lastPresenceCheck: null
+  lastPresenceCheck: null,
+  continuousScanning: false,
+  currentDetectedDevices: new Map(),
+  activePresenceSession: null,
+  lastDeviceDetection: new Map()
 };
 
 // IPC handlers for database operations
@@ -200,6 +217,48 @@ ipcMain.handle('get-discovered-devices', async () => {
   return Array.from(bleState.discoveredDevices.values());
 });
 
+ipcMain.handle('get-current-presence-status', async () => {
+  const enabledDevices = await database.getBleDevices();
+  const monitoredDevices = enabledDevices.filter(device => device.is_enabled);
+  
+  const currentDetected = [];
+  for (const [deviceId, device] of bleState.currentDetectedDevices) {
+    const dbDevice = monitoredDevices.find(d => d.mac_address === device.mac_address);
+    if (dbDevice) {
+      currentDetected.push({
+        ...device,
+        name: dbDevice.name,
+        device_type: dbDevice.device_type
+      });
+    }
+  }
+  
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  const todaySummary = await database.getOfficePresenceSummary({
+    startDate: todayStart.toISOString().split('T')[0],
+    endDate: todayStart.toISOString().split('T')[0]
+  });
+  
+  return {
+    isPresent: currentDetected.length > 0,
+    detectedDevices: currentDetected,
+    activeSession: bleState.activePresenceSession,
+    todayTotalMinutes: todaySummary[0]?.total_minutes || 0,
+    continuousScanning: bleState.continuousScanning
+  };
+});
+
+ipcMain.handle('enable-presence-monitoring', async (event, enabled) => {
+  if (enabled) {
+    await startPresenceMonitoring();
+  } else {
+    await stopPresenceMonitoring();
+  }
+  return { success: true };
+});
+
 // BLE scanning functions
 function startBleScan() {
   if (!noble || bleState.isScanning) return;
@@ -227,12 +286,14 @@ function startBleScan() {
   
   noble.startScanning([], false);
   
-  // Stop scanning after 30 seconds
-  setTimeout(() => {
-    if (bleState.isScanning) {
-      stopBleScan();
-    }
-  }, 30000);
+  // Only stop scanning after 30 seconds if not in continuous mode
+  if (!bleState.continuousScanning) {
+    setTimeout(() => {
+      if (bleState.isScanning) {
+        stopBleScan();
+      }
+    }, 30000);
+  }
 }
 
 function stopBleScan() {
@@ -243,6 +304,79 @@ function stopBleScan() {
   
   if (mainWindow) {
     mainWindow.webContents.send('ble-scan-stopped');
+  }
+}
+
+function startContinuousScanning() {
+  if (!noble || bleState.continuousScanning) return;
+  
+  bleState.continuousScanning = true;
+  
+  noble.on('discover', handlePresenceDeviceDiscovery);
+  
+  if (noble.state === 'poweredOn') {
+    noble.startScanning([], false);
+    bleState.isScanning = true;
+  } else {
+    noble.on('stateChange', (state) => {
+      if (state === 'poweredOn' && bleState.continuousScanning) {
+        noble.startScanning([], false);
+        bleState.isScanning = true;
+      }
+    });
+  }
+}
+
+function stopContinuousScanning() {
+  if (!noble) return;
+  
+  bleState.continuousScanning = false;
+  
+  if (bleState.isScanning) {
+    noble.stopScanning();
+    bleState.isScanning = false;
+  }
+  
+  noble.removeListener('discover', handlePresenceDeviceDiscovery);
+  bleState.currentDetectedDevices.clear();
+  bleState.lastDeviceDetection.clear();
+}
+
+async function handlePresenceDeviceDiscovery(peripheral) {
+  const deviceMac = peripheral.address || peripheral.id;
+  const currentTime = new Date();
+  
+  // Get enabled devices from database
+  const enabledDevices = await database.getBleDevices();
+  const monitoredDevices = enabledDevices.filter(device => 
+    device.is_enabled && device.mac_address === deviceMac
+  );
+  
+  if (monitoredDevices.length > 0) {
+    const device = monitoredDevices[0];
+    
+    // Update current detected devices
+    bleState.currentDetectedDevices.set(deviceMac, {
+      id: peripheral.id,
+      name: device.name,
+      mac_address: deviceMac,
+      device_type: device.device_type,
+      rssi: peripheral.rssi,
+      last_seen: currentTime.toISOString()
+    });
+    
+    bleState.lastDeviceDetection.set(deviceMac, currentTime);
+    
+    // Check if we need to start a new presence session
+    await checkAndManagePresenceSession(device);
+    
+    // Notify renderer of presence update
+    if (mainWindow) {
+      mainWindow.webContents.send('presence-status-updated', {
+        isPresent: true,
+        detectedDevice: device
+      });
+    }
   }
 }
 
@@ -270,19 +404,115 @@ async function startPresenceMonitoring() {
   
   if (monitoredDevices.length === 0) return;
   
+  console.log('Starting presence monitoring for', monitoredDevices.length, 'devices');
+  
+  // Start continuous scanning
+  startContinuousScanning();
+  
+  // Check for device timeouts every 30 seconds
   bleState.presenceTimer = setInterval(async () => {
-    await checkPresence(monitoredDevices);
-  }, 60000); // Check every minute
+    await checkDeviceTimeouts();
+  }, 30000);
+}
+
+async function stopPresenceMonitoring() {
+  if (bleState.presenceTimer) {
+    clearInterval(bleState.presenceTimer);
+    bleState.presenceTimer = null;
+  }
+  
+  // End any active presence session
+  if (bleState.activePresenceSession) {
+    await endPresenceSession();
+  }
+  
+  stopContinuousScanning();
+  console.log('Stopped presence monitoring');
+}
+
+async function checkDeviceTimeouts() {
+  const currentTime = new Date();
+  const timeoutThreshold = 2 * 60 * 1000; // 2 minutes timeout
+  
+  // Check which devices haven't been seen recently
+  for (const [deviceMac, lastSeen] of bleState.lastDeviceDetection) {
+    if (currentTime - lastSeen > timeoutThreshold) {
+      // Remove from current detected devices
+      bleState.currentDetectedDevices.delete(deviceMac);
+      bleState.lastDeviceDetection.delete(deviceMac);
+      
+      console.log('Device timeout:', deviceMac);
+    }
+  }
+  
+  // If no devices are detected and we have an active session, end it
+  if (bleState.currentDetectedDevices.size === 0 && bleState.activePresenceSession) {
+    await endPresenceSession();
+    
+    // Notify renderer
+    if (mainWindow) {
+      mainWindow.webContents.send('presence-status-updated', {
+        isPresent: false,
+        detectedDevice: null
+      });
+    }
+  }
+}
+
+async function checkAndManagePresenceSession(device) {
+  const currentTime = new Date();
+  
+  if (!bleState.activePresenceSession) {
+    // Start a new presence session
+    bleState.activePresenceSession = {
+      device_id: device.id,
+      device_name: device.name,
+      start_time: currentTime,
+      date: currentTime.toISOString().split('T')[0]
+    };
+    
+    console.log('Started presence session for device:', device.name);
+  } else {
+    // Update the last activity time
+    bleState.activePresenceSession.last_activity = currentTime;
+  }
+}
+
+async function endPresenceSession() {
+  if (!bleState.activePresenceSession) return;
+  
+  const endTime = new Date();
+  const session = bleState.activePresenceSession;
+  const durationMinutes = Math.round((endTime - session.start_time) / (1000 * 60));
+  
+  // Only save sessions that are at least 1 minute long
+  if (durationMinutes >= 1) {
+    try {
+      await database.addOfficePresence({
+        date: session.date,
+        start_time: session.start_time.toISOString(),
+        end_time: endTime.toISOString(),
+        duration: durationMinutes,
+        device_id: session.device_id
+      });
+      
+      console.log('Saved presence session:', durationMinutes, 'minutes for device:', session.device_name);
+      
+      // Notify renderer to refresh data
+      if (mainWindow) {
+        mainWindow.webContents.send('presence-data-updated');
+      }
+    } catch (error) {
+      console.error('Failed to save presence session:', error);
+    }
+  }
+  
+  bleState.activePresenceSession = null;
 }
 
 async function checkPresence(monitoredDevices) {
-  // This is a simplified implementation
-  // In a real app, you'd continuously scan for known devices
+  // This function is now replaced by the continuous scanning approach
+  // Keeping for backward compatibility but it's no longer used
   const currentTime = new Date();
-  const today = currentTime.toISOString().split('T')[0];
-  
-  // For now, we'll just create sample presence data
-  // In reality, this would check if any monitored devices are in range
-  
   bleState.lastPresenceCheck = currentTime;
 }
