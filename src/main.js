@@ -50,10 +50,13 @@ const database = require('./database/db');
 
 // Import BLE functionality
 let noble;
+let bleError = null;
 try {
-  noble = require('noble');
+  noble = require('@abandonware/noble');
 } catch (err) {
+  bleError = err;
   console.warn('Noble BLE library not available:', err.message);
+  console.warn('BLE features will be disabled. Please ensure Bluetooth is available and permissions are granted.');
 }
 
 // BLE state and scanning management
@@ -151,7 +154,20 @@ ipcMain.handle('get-office-presence-summary', async (event, filters) => {
 // BLE scanning IPC handlers
 ipcMain.handle('start-ble-scan', async () => {
   if (!noble) {
-    throw new Error('BLE not available on this system');
+    let errorMessage = 'BLE not available on this system';
+    if (bleError) {
+      errorMessage += `: ${bleError.message}`;
+      
+      // Add platform-specific help
+      if (process.platform === 'darwin') {
+        errorMessage += '\n\nOn macOS, please ensure:\n- Bluetooth is enabled in System Preferences\n- The app has Bluetooth permissions\n- You may need to install Xcode command line tools: xcode-select --install';
+      } else if (process.platform === 'linux') {
+        errorMessage += '\n\nOn Linux, please ensure:\n- Bluetooth service is running\n- You have the necessary permissions\n- libbluetooth-dev is installed';
+      } else if (process.platform === 'win32') {
+        errorMessage += '\n\nOn Windows, please ensure:\n- Bluetooth is enabled\n- Windows Build Tools are installed: npm install --global windows-build-tools';
+      }
+    }
+    throw new Error(errorMessage);
   }
   
   return new Promise((resolve, reject) => {
@@ -173,7 +189,7 @@ ipcMain.handle('start-ble-scan', async () => {
 
 ipcMain.handle('stop-ble-scan', async () => {
   if (!noble) {
-    throw new Error('BLE not available on this system');
+    return { success: false, error: 'BLE not available on this system' };
   }
   
   stopBleScan();
