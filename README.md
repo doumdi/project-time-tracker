@@ -28,6 +28,9 @@ Author(s) :
 ### Office Presence
 ![Office Presence Real-time Tracking](https://github.com/user-attachments/assets/38fa1926-7467-41c9-88dd-2f64590621e9)
 
+### Configurable Presence Settings
+![Configurable Presence Settings](https://github.com/user-attachments/assets/432c8f0d-8b5d-47ed-9947-267cf0c7d1ff)
+
 ## Features
 
 - ✅ **Cross-platform** - Works on Windows, macOS, and Linux
@@ -35,13 +38,19 @@ Author(s) :
 - ✅ **Time Tracking** - Live timer with 5-minute precision rounding
 - ✅ **Quick Entry** - Add past time entries manually
 - ✅ **Office Presence Detection** - Automatic presence tracking using Bluetooth Low Energy (BLE) devices
-- ✅ **Real-time BLE Monitoring** - Continuous scanning for registered devices with live status updates
-- ✅ **Automatic Session Management** - Creates/ends presence sessions based on device proximity
+- ✅ **Efficient BLE Monitoring** - Minute-by-minute periodic scanning (30 seconds scan every 60 seconds) for better battery efficiency
+- ✅ **Real-time Device Detection** - Live status updates with flicker-free UI and detection counters
+- ✅ **Enhanced Real-time Device Discovery** - Immediate display of discovered BLE devices with visual "NEW" badges and pulse animations
+- ✅ **Configurable Presence Save Intervals** - User-configurable saving intervals (1-480 minutes, default 15 minutes)
+- ✅ **Automatic Session Management** - Creates/ends presence sessions based on device proximity (2-minute timeout)
+- ✅ **Real-time Detection Counters** - Live seconds counters for device detection and global session time
+- ✅ **Enhanced Debugging** - Comprehensive console logging with BLE SCAN and PRESENCE MONITOR prefixes
+- ✅ **MAC Address Highlighting** - Visual highlighting of Bluetooth MAC addresses in settings for easy identification
 - ✅ **Filtering & Search** - Filter time entries by project, date, and description
 - ✅ **Multiple Views** - Table view, calendar view (month/week/day), and charts
 - ✅ **Charts & Analytics** - Visual representations of time data
 - ✅ **Local Database** - SQLite database that's easy to backup and move
-- ✅ **Modern UI** - Clean, responsive design
+- ✅ **Modern UI** - Clean, responsive design with real-time updates
 
 ## Technology Stack
 
@@ -96,10 +105,11 @@ Author(s) :
 1. **Create Projects**: Start by adding your projects in the "Projects" tab
 2. **Track Time**: Use the "Time Tracker" tab to start/stop timer or add quick entries
 3. **Configure BLE Devices**: (Optional) Set up Bluetooth devices for automatic office presence detection in Settings
-4. **View Entries**: Check all your time entries in the "Time Entries" tab
-5. **Office Presence**: Monitor automatic presence detection in the "Office Presence" tab
-6. **Calendar View**: See your work schedule in the "Calendar" tab
-7. **Analytics**: View charts and statistics in the "Charts" tab
+4. **Configure Presence Settings**: (Optional) Adjust presence save intervals (default 15 minutes) in Settings → Office Presence Detection
+5. **View Entries**: Check all your time entries in the "Time Entries" tab
+6. **Office Presence**: Monitor automatic presence detection with real-time counters in the "Office Presence" tab
+7. **Calendar View**: See your work schedule in the "Calendar" tab
+8. **Analytics**: View charts and statistics in the "Charts" tab
 
 ### Time Tracking
 
@@ -110,11 +120,27 @@ Author(s) :
 ### Office Presence Detection
 
 - **Automatic Tracking**: Enable BLE device monitoring in Settings to track office presence automatically
-- **Real-time Monitoring**: Continuous scanning for registered Bluetooth devices (watches, phones, etc.)
+- **Efficient Scanning**: Minute-by-minute periodic scanning (30 seconds scan every 60 seconds) for optimal battery efficiency
+- **Real-time Monitoring**: Continuous scanning for registered Bluetooth devices (watches, phones, etc.) with live status updates
 - **Smart Sessions**: Automatically creates presence sessions when devices are detected, ends when devices are out of range (2-minute timeout)
+- **Configurable Save Intervals**: User-configurable presence save intervals (1-480 minutes, default 15 minutes) with automatic session rotation
 - **Minimum Session Time**: Only sessions 1 minute or longer are saved
-- **Live Status**: See real-time presence status and currently detected devices
+- **Live Status**: See real-time presence status with animated indicators and currently detected devices
+- **Real-time Counters**: Live seconds counters for each detected device and global session timer with human-readable formatting
+- **Enhanced Device Discovery**: Real-time BLE device discovery in settings with immediate display, visual "NEW" badges, pulse animations, and discovery timestamps
 - **Daily Summaries**: View cumulative presence time for each day
+- **Enhanced Debugging**: Comprehensive console logging with `[BLE SCAN]` and `[PRESENCE MONITOR]` prefixes for troubleshooting
+- **MAC Address Highlighting**: Visual highlighting of Bluetooth MAC addresses in BLE settings for easy device identification
+
+### BLE Device Management
+
+- **Real-time Device Discovery**: Click "Start scan" in BLE settings to immediately see discovered devices as they are found
+- **Visual Feedback**: Newly discovered devices show with animated green "NEW" badges and pulse effects
+- **Live Device Counter**: Real-time counter showing number of devices found during scanning
+- **Discovery Timestamps**: Each device shows when it was discovered for easy identification
+- **MAC Address Display**: Bluetooth MAC addresses are visually highlighted with gray backgrounds for easy debugging
+- **Device Clearing**: Discovered device list is automatically cleared before each new scan for fresh results
+- **Enhanced Reliability**: Improved event handling prevents duplicate listeners and ensures stable real-time updates
 
 ### Data Management
 
@@ -143,13 +169,18 @@ src/
 │   ├── TimeEntryList.js
 │   ├── CalendarView.js
 │   ├── ChartsView.js
-│   ├── OfficePresenceView.js  # Office presence tracking
-│   ├── BleDevicesView.js      # BLE device management
-│   └── Settings.js
+│   ├── OfficePresenceView.js    # Office presence tracking with real-time counters
+│   ├── BleDevicesView.js        # BLE device management with real-time discovery
+│   └── Settings.js              # Settings with configurable presence intervals
+├── contexts/            # React contexts
+│   └── LanguageContext.js       # Internationalization support
 ├── database/           # Database operations
 │   └── db.js          # SQLite database interface
-├── main.js            # Electron main process
-└── preload.js         # Electron preload script
+├── translations/       # Localization files
+│   ├── en.json        # English translations
+│   └── fr.json        # French translations
+├── main.js            # Electron main process with BLE handlers
+└── preload.js         # Electron preload script with IPC bridge
 ```
 
 ### Database Schema
@@ -195,19 +226,19 @@ src/
 ### Windows
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker Setup 1.0.0.exe
+# Creates: dist/Project Time Tracker Setup 1.0.2.exe
 ```
 
 ### macOS
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker-1.0.0.dmg
+# Creates: dist/Project Time Tracker-1.0.2.dmg
 ```
 
 ### Linux
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker-1.0.0.AppImage
+# Creates: dist/Project Time Tracker-1.0.2.AppImage
 ```
 
 ## Troubleshooting
@@ -234,6 +265,10 @@ npm run dist
 - BLE features are optional - the app works fully without them
 - If BLE is not available, presence tracking will be disabled
 - Check that your Bluetooth adapter supports BLE (Bluetooth 4.0+)
+- **Enhanced Debugging**: Enable debug mode by opening Developer Tools (Ctrl+Shift+I / Cmd+Option+I) to see detailed BLE scanning logs with `[BLE SCAN]` and `[PRESENCE MONITOR]` prefixes
+- **Device Discovery Issues**: If devices aren't appearing in real-time, check the console for scan events and ensure Bluetooth permissions are granted
+- **MAC Address Identification**: Use the highlighted MAC addresses in BLE settings to identify and match your devices
+- **Performance**: The app uses efficient periodic scanning (30s every minute) to balance detection accuracy with battery life
 
 ## License
 
