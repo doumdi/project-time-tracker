@@ -13,8 +13,11 @@ const OfficePresenceView = ({ onRefresh }) => {
     detectedDevices: [],
     activeSession: null,
     todayTotalMinutes: 0,
-    continuousScanning: false
+    continuousScanning: false,
+    currentSessionSeconds: 0,
+    globalPresenceStartTime: null
   });
+  const [realtimeCounters, setRealtimeCounters] = useState({});
 
   useEffect(() => {
     loadPresenceData();
@@ -39,14 +42,36 @@ const OfficePresenceView = ({ onRefresh }) => {
     // Refresh current status every 30 seconds
     const statusInterval = setInterval(loadCurrentStatus, 30000);
     
+    // Update real-time counters every second
+    const counterInterval = setInterval(() => {
+      const now = new Date();
+      const newCounters = {};
+      
+      // Update device detection counters
+      currentStatus.detectedDevices.forEach(device => {
+        if (device.secondsDetected !== undefined) {
+          newCounters[device.mac_address] = device.secondsDetected + 1;
+        }
+      });
+      
+      // Update global presence counter
+      if (currentStatus.globalPresenceStartTime) {
+        const startTime = new Date(currentStatus.globalPresenceStartTime);
+        newCounters.globalSeconds = Math.floor((now - startTime) / 1000);
+      }
+      
+      setRealtimeCounters(newCounters);
+    }, 1000);
+    
     return () => {
       clearInterval(statusInterval);
+      clearInterval(counterInterval);
       if (window.electronAPI) {
         window.electronAPI.removeAllListeners('presence-status-updated');
         window.electronAPI.removeAllListeners('presence-data-updated');
       }
     };
-  }, [selectedDate]);
+  }, [selectedDate, currentStatus.detectedDevices, currentStatus.globalPresenceStartTime]);
 
   const loadCurrentStatus = async () => {
     try {
@@ -95,6 +120,21 @@ const OfficePresenceView = ({ onRefresh }) => {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
+  const formatSeconds = (seconds) => {
+    if (!seconds) return '0s';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
   const getTotalDuration = () => {
     return presenceData.reduce((total, entry) => total + (entry.duration || 0), 0);
   };
@@ -119,22 +159,41 @@ const OfficePresenceView = ({ onRefresh }) => {
             </div>
           </div>
           
+          {currentStatus.isPresent && (
+            <div className="global-presence-time">
+              <h4>{t('presence.currentSessionTime')}</h4>
+              <div className="global-time-display">
+                <span className="global-time">
+                  {formatSeconds(realtimeCounters.globalSeconds || currentStatus.currentSessionSeconds || 0)}
+                </span>
+              </div>
+            </div>
+          )}
+          
           {currentStatus.isPresent && currentStatus.detectedDevices.length > 0 && (
             <div className="detected-devices">
               <h4>{t('presence.detectedDevices')}</h4>
               <div className="devices-list">
-                {currentStatus.detectedDevices.map((device, index) => (
-                  <div key={index} className="device-item">
-                    <span className="device-icon">
-                      {device.device_type === 'watch' ? '⌚' : 
-                       device.device_type === 'phone' ? '📱' : '📟'}
-                    </span>
-                    <span className="device-name">{device.name}</span>
-                    <span className="device-last-seen">
-                      {device.last_seen ? format(parseISO(device.last_seen), 'HH:mm:ss') : ''}
-                    </span>
-                  </div>
-                ))}
+                {currentStatus.detectedDevices.map((device, index) => {
+                  const deviceSeconds = realtimeCounters[device.mac_address] || device.secondsDetected || 0;
+                  return (
+                    <div key={index} className="device-item">
+                      <span className="device-icon">
+                        {device.device_type === 'watch' ? '⌚' : 
+                         device.device_type === 'phone' ? '📱' : '📟'}
+                      </span>
+                      <span className="device-name">{device.name}</span>
+                      <div className="device-timing">
+                        <span className="device-detected-time">
+                          {t('presence.detectedFor')}: {formatSeconds(deviceSeconds)}
+                        </span>
+                        <span className="device-last-seen">
+                          {device.last_seen ? format(parseISO(device.last_seen), 'HH:mm:ss') : ''}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

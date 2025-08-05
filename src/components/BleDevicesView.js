@@ -61,7 +61,15 @@ const BleDevicesView = ({ onBack }) => {
     try {
       setIsScanning(true);
       setDiscoveredDevices([]);
-      await window.electronAPI.startBleScan();
+      
+      // First try to trigger an immediate scan if presence monitoring is active
+      try {
+        await window.electronAPI.triggerImmediateScan();
+      } catch (triggerError) {
+        // If immediate scan fails, fall back to regular scan
+        console.warn('Immediate scan failed, using regular scan:', triggerError);
+        await window.electronAPI.startBleScan();
+      }
     } catch (error) {
       console.error('Failed to start BLE scan:', error);
       setError(t('bleDevices.scanFailed') + ': ' + error.message);

@@ -82,7 +82,10 @@ let bleState = {
   continuousScanning: false,
   currentDetectedDevices: new Map(),
   activePresenceSession: null,
-  lastDeviceDetection: new Map()
+  lastDeviceDetection: new Map(),
+  periodicScanTimer: null,
+  deviceDetectionStartTime: new Map(), // Track when each device was first detected
+  globalPresenceStartTime: null // Track when global presence started
 };
 
 // IPC handlers for database operations
@@ -204,6 +207,32 @@ ipcMain.handle('start-ble-scan', async () => {
   });
 });
 
+// Add a new handler for triggering immediate scans during presence monitoring
+ipcMain.handle('trigger-immediate-scan', async () => {
+  if (!noble) {
+    throw new Error('BLE not available on this system');
+  }
+  
+  if (noble.state === 'poweredOn') {
+    console.log('Triggering immediate BLE scan...');
+    noble.startScanning([], false);
+    bleState.isScanning = true;
+    
+    // Stop scanning after 30 seconds
+    setTimeout(() => {
+      if (bleState.isScanning && noble.state === 'poweredOn') {
+        noble.stopScanning();
+        bleState.isScanning = false;
+        console.log('Immediate scan completed');
+      }
+    }, 30000);
+    
+    return { success: true };
+  } else {
+    throw new Error('BLE is not powered on: ' + noble.state);
+  }
+});
+
 ipcMain.handle('stop-ble-scan', async () => {
   if (!noble) {
     return { success: false, error: 'BLE not available on this system' };
@@ -222,13 +251,19 @@ ipcMain.handle('get-current-presence-status', async () => {
   const monitoredDevices = enabledDevices.filter(device => device.is_enabled);
   
   const currentDetected = [];
+  const currentTime = new Date();
+  
   for (const [deviceId, device] of bleState.currentDetectedDevices) {
     const dbDevice = monitoredDevices.find(d => d.mac_address === device.mac_address);
     if (dbDevice) {
+      const detectionStartTime = bleState.deviceDetectionStartTime.get(deviceId);
+      const secondsDetected = detectionStartTime ? Math.floor((currentTime - detectionStartTime) / 1000) : 0;
+      
       currentDetected.push({
         ...device,
         name: dbDevice.name,
-        device_type: dbDevice.device_type
+        device_type: dbDevice.device_type,
+        secondsDetected: secondsDetected
       });
     }
   }
@@ -241,12 +276,20 @@ ipcMain.handle('get-current-presence-status', async () => {
     endDate: todayStart.toISOString().split('T')[0]
   });
   
+  // Calculate current session time if active
+  let currentSessionSeconds = 0;
+  if (bleState.globalPresenceStartTime) {
+    currentSessionSeconds = Math.floor((currentTime - bleState.globalPresenceStartTime) / 1000);
+  }
+  
   return {
     isPresent: currentDetected.length > 0,
     detectedDevices: currentDetected,
     activeSession: bleState.activePresenceSession,
     todayTotalMinutes: todaySummary[0]?.total_minutes || 0,
-    continuousScanning: bleState.continuousScanning
+    continuousScanning: bleState.continuousScanning,
+    currentSessionSeconds: currentSessionSeconds,
+    globalPresenceStartTime: bleState.globalPresenceStartTime
   };
 });
 
@@ -314,14 +357,47 @@ function startContinuousScanning() {
   
   noble.on('discover', handlePresenceDeviceDiscovery);
   
+  // Start periodic scanning every minute instead of continuous scanning
+  bleState.periodicScanTimer = setInterval(() => {
+    if (noble.state === 'poweredOn') {
+      console.log('Starting periodic BLE scan...');
+      noble.startScanning([], false);
+      bleState.isScanning = true;
+      
+      // Stop scanning after 30 seconds
+      setTimeout(() => {
+        if (bleState.isScanning && noble.state === 'poweredOn') {
+          noble.stopScanning();
+          bleState.isScanning = false;
+          console.log('Stopped periodic BLE scan');
+        }
+      }, 30000); // Scan for 30 seconds each minute
+    }
+  }, 60000); // Every minute
+  
+  // Start the first scan immediately
   if (noble.state === 'poweredOn') {
     noble.startScanning([], false);
     bleState.isScanning = true;
+    
+    setTimeout(() => {
+      if (bleState.isScanning && noble.state === 'poweredOn') {
+        noble.stopScanning();
+        bleState.isScanning = false;
+      }
+    }, 30000);
   } else {
     noble.on('stateChange', (state) => {
-      if (state === 'poweredOn' && bleState.continuousScanning) {
+      if (state === 'poweredOn' && bleState.continuousScanning && !bleState.isScanning) {
         noble.startScanning([], false);
         bleState.isScanning = true;
+        
+        setTimeout(() => {
+          if (bleState.isScanning && noble.state === 'poweredOn') {
+            noble.stopScanning();
+            bleState.isScanning = false;
+          }
+        }, 30000);
       }
     });
   }
@@ -332,6 +408,12 @@ function stopContinuousScanning() {
   
   bleState.continuousScanning = false;
   
+  // Clear the periodic scan timer
+  if (bleState.periodicScanTimer) {
+    clearInterval(bleState.periodicScanTimer);
+    bleState.periodicScanTimer = null;
+  }
+  
   if (bleState.isScanning) {
     noble.stopScanning();
     bleState.isScanning = false;
@@ -340,6 +422,8 @@ function stopContinuousScanning() {
   noble.removeListener('discover', handlePresenceDeviceDiscovery);
   bleState.currentDetectedDevices.clear();
   bleState.lastDeviceDetection.clear();
+  bleState.deviceDetectionStartTime.clear();
+  bleState.globalPresenceStartTime = null;
 }
 
 async function handlePresenceDeviceDiscovery(peripheral) {
@@ -354,6 +438,16 @@ async function handlePresenceDeviceDiscovery(peripheral) {
   
   if (monitoredDevices.length > 0) {
     const device = monitoredDevices[0];
+    
+    // Track device detection start time
+    if (!bleState.deviceDetectionStartTime.has(deviceMac)) {
+      bleState.deviceDetectionStartTime.set(deviceMac, currentTime);
+    }
+    
+    // Track global presence start time
+    if (!bleState.globalPresenceStartTime) {
+      bleState.globalPresenceStartTime = currentTime;
+    }
     
     // Update current detected devices
     bleState.currentDetectedDevices.set(deviceMac, {
@@ -440,6 +534,7 @@ async function checkDeviceTimeouts() {
       // Remove from current detected devices
       bleState.currentDetectedDevices.delete(deviceMac);
       bleState.lastDeviceDetection.delete(deviceMac);
+      bleState.deviceDetectionStartTime.delete(deviceMac);
       
       console.log('Device timeout:', deviceMac);
     }
@@ -447,6 +542,9 @@ async function checkDeviceTimeouts() {
   
   // If no devices are detected and we have an active session, end it
   if (bleState.currentDetectedDevices.size === 0 && bleState.activePresenceSession) {
+    // Reset global presence start time
+    bleState.globalPresenceStartTime = null;
+    
     await endPresenceSession();
     
     // Notify renderer

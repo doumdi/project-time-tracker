@@ -178,7 +178,9 @@
     "currentlyAbsent": "Actuellement Absent",
     "activeScanning": "Scan Actif",
     "detectedDevices": "Appareils Détectés",
-    "todayTotal": "Total Aujourd'hui"
+    "todayTotal": "Total Aujourd'hui",
+    "currentSessionTime": "Temps de Session Actuelle",
+    "detectedFor": "Détecté depuis"
   },
   "bleDevices": {
     "title": "Configuration des Appareils BLE",
