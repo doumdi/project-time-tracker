@@ -206,6 +206,8 @@
     "deviceDeleted": "Appareil supprimé avec succès !",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet appareil ?",
     "bleNotAvailable": "BLE n'est pas disponible sur ce système",
-    "scanFailed": "Échec du démarrage du scan BLE"
+    "scanFailed": "Échec du démarrage du scan BLE",
+    "discovered": "Découvert",
+    "new": "NOUVEAU"
   }
 }

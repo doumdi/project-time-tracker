@@ -336,6 +336,9 @@ function startBleScan() {
     mainWindow.webContents.send('ble-devices-cleared');
   }
   
+  // Remove any existing listeners to prevent duplicates
+  noble.removeAllListeners('discover');
+  
   noble.on('discover', (peripheral) => {
     const device = {
       id: peripheral.id,
@@ -351,12 +354,14 @@ function startBleScan() {
     
     bleState.discoveredDevices.set(peripheral.id, device);
     
-    // Send update to renderer
+    // Send real-time update to renderer immediately
     if (mainWindow) {
+      console.log('[BLE SCAN] Sending real-time device update to frontend');
       mainWindow.webContents.send('ble-device-discovered', device);
     }
   });
   
+  // Start scanning for all devices (empty array means scan for all)
   noble.startScanning([], false);
   
   // Only stop scanning after 30 seconds if not in continuous mode

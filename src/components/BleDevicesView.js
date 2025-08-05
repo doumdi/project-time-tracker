@@ -15,14 +15,30 @@ const BleDevicesView = ({ onBack }) => {
     
     // Set up BLE event listeners
     const handleDeviceDiscovered = (event, device) => {
+      console.log('[BLE UI] Real-time device discovered:', device.name, device.mac_address);
       setDiscoveredDevices(prev => {
         const existingIndex = prev.findIndex(d => d.id === device.id);
         if (existingIndex >= 0) {
+          // Update existing device with latest info
           const updated = [...prev];
-          updated[existingIndex] = device;
+          updated[existingIndex] = { ...device, discovered_at: new Date().toISOString() };
           return updated;
         } else {
-          return [...prev, device];
+          // Add new device to the list with a "new" flag for visual indication
+          const newDevice = { 
+            ...device, 
+            discovered_at: new Date().toISOString(),
+            isNew: true 
+          };
+          
+          // Remove the "new" flag after 3 seconds
+          setTimeout(() => {
+            setDiscoveredDevices(current => 
+              current.map(d => d.id === device.id ? { ...d, isNew: false } : d)
+            );
+          }, 3000);
+          
+          return [...prev, newDevice];
         }
       });
     };
@@ -33,10 +49,17 @@ const BleDevicesView = ({ onBack }) => {
     };
 
     const handleScanStopped = () => {
+      console.log('[BLE UI] Scan stopped');
       setIsScanning(false);
     };
 
     if (window.electronAPI) {
+      // Remove any existing listeners first to prevent duplicates
+      window.electronAPI.removeAllListeners('ble-device-discovered');
+      window.electronAPI.removeAllListeners('ble-devices-cleared');
+      window.electronAPI.removeAllListeners('ble-scan-stopped');
+      
+      // Add new listeners
       window.electronAPI.onBleDeviceDiscovered(handleDeviceDiscovered);
       window.electronAPI.onBleDevicesCleared(handleDevicesCleared);
       window.electronAPI.onBleScanStopped(handleScanStopped);
@@ -207,6 +230,9 @@ const BleDevicesView = ({ onBack }) => {
             <div className="section-header">
               <h3>{t('bleDevices.discoveredDevices')}</h3>
               <div className="scan-controls">
+                <span className="device-counter">
+                  {discoveredDevices.length} {discoveredDevices.length === 1 ? 'device' : 'devices'} found
+                </span>
                 {!isScanning ? (
                   <button className="btn btn-primary" onClick={startScan}>
                     {t('bleDevices.scanForDevices')}
@@ -236,18 +262,26 @@ const BleDevicesView = ({ onBack }) => {
                   {discoveredDevices.map((device) => (
                     <div
                       key={device.id}
-                      className="device-card discovered"
+                      className={`device-card discovered ${device.isNew ? 'newly-discovered' : ''}`}
                       draggable
                       onDragStart={(e) => handleDragStart(e, device)}
                       onClick={() => addDevice(device)}
                     >
                       <div className="device-info">
-                        <div className="device-name">{device.name}</div>
+                        <div className="device-header">
+                          <div className="device-name">{device.name}</div>
+                          {device.isNew && <span className="new-badge">{t('bleDevices.new') || 'NEW'}</span>}
+                        </div>
                         <div className="device-details">
                           <span className="device-type">{device.device_type}</span>
                           <span className="device-mac">{device.mac_address}</span>
                         </div>
-                        <div className="device-rssi">RSSI: {device.rssi}dBm</div>
+                        <div className="device-stats">
+                          <span className="device-rssi">RSSI: {device.rssi}dBm</span>
+                          <span className="discovery-time">
+                            {t('bleDevices.discovered') || 'Discovered'}: {new Date(device.discovered_at).toLocaleTimeString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -335,8 +369,23 @@ const BleDevicesView = ({ onBack }) => {
           color: #333;
         }
 
+        .scan-controls {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
         .scan-controls button {
           font-size: 0.875rem;
+        }
+
+        .device-counter {
+          font-size: 0.875rem;
+          color: #666;
+          font-weight: 500;
+          padding: 0.25rem 0.5rem;
+          background: #e9ecef;
+          border-radius: 4px;
         }
 
         .scanning-indicator {
@@ -384,6 +433,40 @@ const BleDevicesView = ({ onBack }) => {
           background: #f8f9fa;
         }
 
+        .device-card.newly-discovered {
+          background: #e8f5e8;
+          border-color: #28a745;
+          animation: pulse-border 2s ease-in-out;
+        }
+
+        @keyframes pulse-border {
+          0% { border-color: #28a745; box-shadow: 0 0 5px rgba(40, 167, 69, 0.5); }
+          50% { border-color: #20c997; box-shadow: 0 0 10px rgba(32, 201, 151, 0.7); }
+          100% { border-color: #28a745; box-shadow: 0 0 5px rgba(40, 167, 69, 0.5); }
+        }
+
+        .device-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.25rem;
+        }
+
+        .new-badge {
+          background: #28a745;
+          color: white;
+          font-size: 0.7rem;
+          padding: 0.2rem 0.4rem;
+          border-radius: 10px;
+          font-weight: 600;
+          animation: fade-in 0.5s ease-in;
+        }
+
+        @keyframes fade-in {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
         .device-info {
           display: flex;
           flex-direction: column;
@@ -420,6 +503,18 @@ const BleDevicesView = ({ onBack }) => {
         .device-rssi {
           font-size: 0.75rem;
           color: #999;
+        }
+
+        .device-stats {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .discovery-time {
+          font-size: 0.75rem;
+          color: #007bff;
+          font-weight: 500;
         }
 
         .my-devices {
