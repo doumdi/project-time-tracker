@@ -137,8 +137,11 @@
     "officePresence": "Présence Bureau",
     "enableOfficePresence": "Activer la Détection de Présence au Bureau",
     "officePresenceDescription": "Utiliser les appareils BLE pour suivre automatiquement la présence au bureau",
+    "presenceSaveInterval": "Intervalle de Sauvegarde (minutes)",
+    "presenceSaveIntervalDescription": "À quelle fréquence sauvegarder les sessions de présence dans la base de données (1-480 minutes)",
     "configureDevices": "Configurer les Appareils BLE",
-    "configureBleDevices": "Configurer les Appareils BLE"
+    "configureBleDevices": "Configurer les Appareils BLE",
+    "errorSaving": "Erreur lors de la sauvegarde des paramètres"
   },
   "common": {
     "save": "Enregistrer",

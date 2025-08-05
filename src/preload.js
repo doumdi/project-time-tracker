@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDiscoveredDevices: () => ipcRenderer.invoke('get-discovered-devices'),
   getCurrentPresenceStatus: () => ipcRenderer.invoke('get-current-presence-status'),
   enablePresenceMonitoring: (enabled) => ipcRenderer.invoke('enable-presence-monitoring', enabled),
+  setPresenceSaveInterval: (intervalMinutes) => ipcRenderer.invoke('set-presence-save-interval', intervalMinutes),
+  getPresenceSaveInterval: () => ipcRenderer.invoke('get-presence-save-interval'),
   
   // Event listeners for BLE events
   onBleDeviceDiscovered: (callback) => ipcRenderer.on('ble-device-discovered', callback),

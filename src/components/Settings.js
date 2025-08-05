@@ -18,6 +18,7 @@ const Settings = () => {
   const [databaseVersion, setDatabaseVersion] = useState(1);
   const [showBleDevices, setShowBleDevices] = useState(false);
   const [officePresenceEnabled, setOfficePresenceEnabled] = useState(false);
+  const [presenceSaveInterval, setPresenceSaveInterval] = useState(15); // Default 15 minutes
 
   // Load version information
   useEffect(() => {
@@ -91,12 +92,39 @@ const Settings = () => {
     setShowBleDevices(false);
   };
 
+  const handlePresenceSaveIntervalChange = async (e) => {
+    const intervalMinutes = parseInt(e.target.value);
+    if (isNaN(intervalMinutes) || intervalMinutes < 1) return;
+    
+    setPresenceSaveInterval(intervalMinutes);
+    
+    try {
+      if (window.electronAPI) {
+        await window.electronAPI.setPresenceSaveInterval(intervalMinutes);
+        alert(t('settings.settingsSaved'));
+      }
+    } catch (error) {
+      console.error('Failed to update presence save interval:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+    }
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
       const stored = localStorage.getItem('officePresenceEnabled');
       const enabled = stored === 'true';
       setOfficePresenceEnabled(enabled);
+      
+      // Load presence save interval
+      try {
+        if (window.electronAPI) {
+          const interval = await window.electronAPI.getPresenceSaveInterval();
+          setPresenceSaveInterval(interval);
+        }
+      } catch (error) {
+        console.error('Failed to load presence save interval:', error);
+      }
       
       // Initialize presence monitoring if enabled
       if (enabled && window.electronAPI) {
@@ -191,6 +219,25 @@ const Settings = () => {
                 </label>
                 <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
                   {t('settings.officePresenceDescription')}
+                </small>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">
+                  {t('settings.presenceSaveInterval') || 'Presence Save Interval (minutes)'}
+                </label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={presenceSaveInterval}
+                  onChange={handlePresenceSaveIntervalChange}
+                  min="1"
+                  max="480"
+                  step="1"
+                  style={{ maxWidth: '120px' }}
+                />
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.presenceSaveIntervalDescription') || 'How often to save presence sessions to database (1-480 minutes)'}
                 </small>
               </div>
 

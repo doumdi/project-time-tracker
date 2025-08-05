@@ -137,8 +137,11 @@
     "officePresence": "Office Presence",
     "enableOfficePresence": "Enable Office Presence Detection",
     "officePresenceDescription": "Use BLE devices to automatically track office presence",
+    "presenceSaveInterval": "Presence Save Interval (minutes)",
+    "presenceSaveIntervalDescription": "How often to save presence sessions to database (1-480 minutes)",
     "configureDevices": "Configure BLE Devices",
-    "configureBleDevices": "Configure BLE Devices"
+    "configureBleDevices": "Configure BLE Devices",
+    "errorSaving": "Error saving settings"
   },
   "common": {
     "save": "Save",
