@@ -195,16 +195,16 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then
             find dist -name "*.exe" -type f | while read file; do
               echo "Uploading Windows installer: $file"
-              gh release upload "$VERSION" "$file"
+              gh release upload "$VERSION" "$file" --clobber
             done
           elif [ "$RUNNER_OS" = "macOS" ]; then
             find dist -name "*.dmg" -type f | while read file; do
               echo "Uploading macOS package: $file"
-              gh release upload "$VERSION" "$file"
+              gh release upload "$VERSION" "$file" --clobber
             done
           elif [ "$RUNNER_OS" = "Linux" ]; then
             find dist -name "*.AppImage" -type f | while read file; do
               echo "Uploading Linux AppImage: $file"
-              gh release upload "$VERSION" "$file"
+              gh release upload "$VERSION" "$file" --clobber
             done
           fi
