@@ -390,6 +390,11 @@ const BleDevicesView = ({ onBack }) => {
         .device-mac {
           font-family: monospace;
           font-size: 0.8rem;
+          background: #e9ecef;
+          padding: 0.125rem 0.25rem;
+          border-radius: 3px;
+          color: #495057;
+          font-weight: 500;
         }
 
         .device-rssi {

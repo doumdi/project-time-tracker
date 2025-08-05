@@ -42,6 +42,17 @@ const OfficePresenceView = ({ onRefresh }) => {
     // Refresh current status every 30 seconds
     const statusInterval = setInterval(loadCurrentStatus, 30000);
     
+    return () => {
+      clearInterval(statusInterval);
+      if (window.electronAPI) {
+        window.electronAPI.removeAllListeners('presence-status-updated');
+        window.electronAPI.removeAllListeners('presence-data-updated');
+      }
+    };
+  }, [selectedDate]);
+
+  // Separate effect for real-time counters to prevent flickering
+  useEffect(() => {
     // Update real-time counters every second
     const counterInterval = setInterval(() => {
       const now = new Date();
@@ -64,14 +75,9 @@ const OfficePresenceView = ({ onRefresh }) => {
     }, 1000);
     
     return () => {
-      clearInterval(statusInterval);
       clearInterval(counterInterval);
-      if (window.electronAPI) {
-        window.electronAPI.removeAllListeners('presence-status-updated');
-        window.electronAPI.removeAllListeners('presence-data-updated');
-      }
     };
-  }, [selectedDate, currentStatus.detectedDevices, currentStatus.globalPresenceStartTime]);
+  }, [currentStatus.globalPresenceStartTime]); // Only depend on globalPresenceStartTime
 
   const loadCurrentStatus = async () => {
     try {
