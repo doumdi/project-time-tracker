@@ -15,6 +15,41 @@ const TimeTracker = ({ projects, onRefresh }) => {
     duration: 5
   });
 
+  // Load active timer state from localStorage on component mount
+  useEffect(() => {
+    const savedTimer = localStorage.getItem('activeTimer');
+    if (savedTimer) {
+      try {
+        const timerData = JSON.parse(savedTimer);
+        if (timerData.isTracking && timerData.startTime && timerData.selectedProject) {
+          setSelectedProject(timerData.selectedProject);
+          setDescription(timerData.description || '');
+          setIsTracking(true);
+          setStartTime(timerData.startTime);
+          setElapsedTime(Date.now() - timerData.startTime);
+        }
+      } catch (error) {
+        console.error('Error loading saved timer:', error);
+        localStorage.removeItem('activeTimer');
+      }
+    }
+  }, []);
+
+  // Save active timer state to localStorage whenever it changes
+  useEffect(() => {
+    if (isTracking && startTime && selectedProject) {
+      const timerData = {
+        isTracking,
+        startTime,
+        selectedProject,
+        description
+      };
+      localStorage.setItem('activeTimer', JSON.stringify(timerData));
+    } else {
+      localStorage.removeItem('activeTimer');
+    }
+  }, [isTracking, startTime, selectedProject, description]);
+
   useEffect(() => {
     let interval;
     if (isTracking && startTime) {
@@ -77,6 +112,10 @@ const TimeTracker = ({ projects, onRefresh }) => {
       setStartTime(null);
       setElapsedTime(0);
       setDescription('');
+      
+      // Clear the saved timer from localStorage
+      localStorage.removeItem('activeTimer');
+      
       onRefresh();
       
       alert(`${t('timer.timeEntrySaved')}: ${Math.floor(roundedDuration / 60)}${t('common.hours')} ${roundedDuration % 60}${t('common.minutes')}`);
@@ -84,6 +123,8 @@ const TimeTracker = ({ projects, onRefresh }) => {
       console.error('Error saving time entry:', error);
       alert(`${t('timer.errorSaving')}: ` + error.message);
       setIsTracking(false);
+      // Clear the saved timer from localStorage even on error
+      localStorage.removeItem('activeTimer');
     }
   };
 

@@ -8,6 +8,8 @@ const BleDevicesView = ({ onBack }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   useEffect(() => {
     loadMyDevices();
@@ -178,6 +180,35 @@ const BleDevicesView = ({ onBack }) => {
     }
   };
 
+  const startEditDevice = (device) => {
+    setEditingDevice(device.id);
+    setEditingName(device.name);
+  };
+
+  const cancelEditDevice = () => {
+    setEditingDevice(null);
+    setEditingName('');
+  };
+
+  const saveEditDevice = async (device) => {
+    if (!editingName.trim()) {
+      alert(t('bleDevices.nameRequired') || 'Device name is required');
+      return;
+    }
+    
+    try {
+      const updatedDevice = { ...device, name: editingName.trim() };
+      await window.electronAPI.updateBleDevice(updatedDevice);
+      await loadMyDevices();
+      setEditingDevice(null);
+      setEditingName('');
+      alert(t('bleDevices.deviceUpdated'));
+    } catch (error) {
+      console.error('Failed to update device name:', error);
+      alert(t('common.error') + ': ' + error.message);
+    }
+  };
+
   const handleDragStart = (e, device) => {
     e.dataTransfer.setData('application/json', JSON.stringify(device));
   };
@@ -311,11 +342,56 @@ const BleDevicesView = ({ onBack }) => {
                   {myDevices.map((device) => (
                     <div key={device.id} className="device-item">
                       <div className="device-info">
-                        <div className="device-name">{device.name}</div>
-                        <div className="device-details">
-                          <span className="device-type">{device.device_type}</span>
-                          <span className="device-mac">{device.mac_address}</span>
-                        </div>
+                        {editingDevice === device.id ? (
+                          <div className="edit-name-container">
+                            <input
+                              type="text"
+                              className="edit-name-input"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveEditDevice(device);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditDevice();
+                                }
+                              }}
+                              autoFocus
+                              placeholder={t('bleDevices.enterDeviceName') || 'Enter device name'}
+                            />
+                            <div className="edit-name-actions">
+                              <button
+                                className="btn btn-save btn-sm"
+                                onClick={() => saveEditDevice(device)}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                className="btn btn-cancel btn-sm"
+                                onClick={cancelEditDevice}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="device-name-container">
+                              <div className="device-name">{device.name}</div>
+                              <button
+                                className="btn btn-edit btn-sm"
+                                onClick={() => startEditDevice(device)}
+                                title={t('bleDevices.editName') || 'Edit name'}
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                            <div className="device-details">
+                              <span className="device-type">{device.device_type}</span>
+                              <span className="device-mac">{device.mac_address}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div className="device-actions">
                         <label className="toggle-switch">
@@ -476,6 +552,81 @@ const BleDevicesView = ({ onBack }) => {
         .device-name {
           font-weight: 600;
           color: #333;
+        }
+
+        .device-name-container {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .edit-name-container {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          width: 100%;
+        }
+
+        .edit-name-input {
+          padding: 0.5rem;
+          border: 1px solid #007bff;
+          border-radius: 4px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #333;
+          outline: none;
+        }
+
+        .edit-name-input:focus {
+          border-color: #0056b3;
+          box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .edit-name-actions {
+          display: flex;
+          gap: 0.25rem;
+        }
+
+        .btn-edit {
+          background: #f8f9fa;
+          border: 1px solid #dee2e6;
+          color: #6c757d;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          min-width: auto;
+        }
+
+        .btn-edit:hover {
+          background: #e9ecef;
+          border-color: #adb5bd;
+        }
+
+        .btn-save {
+          background: #28a745;
+          color: white;
+          border: 1px solid #28a745;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          min-width: auto;
+        }
+
+        .btn-save:hover {
+          background: #218838;
+          border-color: #1e7e34;
+        }
+
+        .btn-cancel {
+          background: #6c757d;
+          color: white;
+          border: 1px solid #6c757d;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          min-width: auto;
+        }
+
+        .btn-cancel:hover {
+          background: #5a6268;
+          border-color: #545b62;
         }
 
         .device-details {
