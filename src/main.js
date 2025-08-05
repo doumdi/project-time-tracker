@@ -216,11 +216,17 @@ ipcMain.handle('trigger-immediate-scan', async () => {
   if (noble.state === 'poweredOn') {
     console.log('[BLE SCAN] Triggering immediate BLE scan from settings...');
     
+    // Clear discovered devices for fresh results
+    bleState.discoveredDevices.clear();
+    
+    // Notify frontend to clear discovered devices
+    if (mainWindow) {
+      mainWindow.webContents.send('ble-devices-cleared');
+    }
+    
     // If continuous scanning is active, don't interfere with it
     if (bleState.continuousScanning) {
       console.log('[BLE SCAN] Continuous scanning active, triggering immediate discovery');
-      // Clear discovered devices for fresh results
-      bleState.discoveredDevices.clear();
       // Force a scan cycle if we're not currently scanning
       if (!bleState.isScanning) {
         noble.startScanning([], false);
@@ -324,6 +330,11 @@ function startBleScan() {
   console.log('[BLE SCAN] Starting BLE device scan...');
   bleState.isScanning = true;
   bleState.discoveredDevices.clear();
+  
+  // Notify frontend to clear discovered devices
+  if (mainWindow) {
+    mainWindow.webContents.send('ble-devices-cleared');
+  }
   
   noble.on('discover', (peripheral) => {
     const device = {

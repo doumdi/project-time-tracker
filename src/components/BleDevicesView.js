@@ -11,6 +11,7 @@ const BleDevicesView = ({ onBack }) => {
 
   useEffect(() => {
     loadMyDevices();
+    loadDiscoveredDevices();
     
     // Set up BLE event listeners
     const handleDeviceDiscovered = (event, device) => {
@@ -26,18 +27,25 @@ const BleDevicesView = ({ onBack }) => {
       });
     };
 
+    const handleDevicesCleared = () => {
+      console.log('[BLE UI] Clearing discovered devices list');
+      setDiscoveredDevices([]);
+    };
+
     const handleScanStopped = () => {
       setIsScanning(false);
     };
 
     if (window.electronAPI) {
       window.electronAPI.onBleDeviceDiscovered(handleDeviceDiscovered);
+      window.electronAPI.onBleDevicesCleared(handleDevicesCleared);
       window.electronAPI.onBleScanStopped(handleScanStopped);
     }
 
     return () => {
       if (window.electronAPI) {
         window.electronAPI.removeAllListeners('ble-device-discovered');
+        window.electronAPI.removeAllListeners('ble-devices-cleared');
         window.electronAPI.removeAllListeners('ble-scan-stopped');
       }
     };
@@ -56,15 +64,27 @@ const BleDevicesView = ({ onBack }) => {
     }
   };
 
+  const loadDiscoveredDevices = async () => {
+    try {
+      const devices = await window.electronAPI.getDiscoveredDevices();
+      console.log('[BLE UI] Loaded discovered devices:', devices.length);
+      setDiscoveredDevices(devices);
+    } catch (error) {
+      console.error('Failed to load discovered devices:', error);
+    }
+  };
+
   const startScan = async () => {
     setError(null);
     try {
       setIsScanning(true);
+      console.log('[BLE UI] Starting scan - clearing discovered devices');
       setDiscoveredDevices([]);
       
       // First try to trigger an immediate scan if presence monitoring is active
       try {
         await window.electronAPI.triggerImmediateScan();
+        console.log('[BLE UI] Immediate scan triggered successfully');
       } catch (triggerError) {
         // If immediate scan fails, fall back to regular scan
         console.warn('Immediate scan failed, using regular scan:', triggerError);
