@@ -211,6 +211,9 @@
     "bleNotAvailable": "BLE n'est pas disponible sur ce système",
     "scanFailed": "Échec du démarrage du scan BLE",
     "discovered": "Découvert",
-    "new": "NOUVEAU"
+    "new": "NOUVEAU",
+    "editName": "Modifier le nom",
+    "nameRequired": "Le nom de l'appareil est requis",
+    "enterDeviceName": "Entrez le nom de l'appareil"
   }
 }

@@ -211,6 +211,9 @@
     "bleNotAvailable": "BLE is not available on this system",
     "scanFailed": "Failed to start BLE scan",
     "discovered": "Discovered",
-    "new": "NEW"
+    "new": "NEW",
+    "editName": "Edit name",
+    "nameRequired": "Device name is required",
+    "enterDeviceName": "Enter device name"
   }
 }

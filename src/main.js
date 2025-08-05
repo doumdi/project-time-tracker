@@ -52,6 +52,70 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('before-quit', async (event) => {
+  console.log('App is about to quit, checking for active sessions...');
+  
+  try {
+    // Check if there's an active presence session and save it
+    if (bleState.activePresenceSession) {
+      console.log('Saving active presence session before quit...');
+      await endPresenceSession();
+    }
+    
+    // Check if there's an active timer in the frontend and save it
+    // We'll need to communicate with the renderer process to check this
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Send a message to the renderer to save any active timer
+      const result = await mainWindow.webContents.executeJavaScript(`
+        // Check if there's an active timer in localStorage or component state
+        const activeTimer = localStorage.getItem('activeTimer');
+        if (activeTimer) {
+          const timerData = JSON.parse(activeTimer);
+          // If timer is active, save it
+          if (timerData.isTracking && timerData.startTime && timerData.selectedProject) {
+            return {
+              shouldSave: true,
+              project_id: parseInt(timerData.selectedProject),
+              description: timerData.description || '',
+              start_time: timerData.startTime,
+              end_time: new Date().toISOString()
+            };
+          }
+        }
+        return { shouldSave: false };
+      `);
+      
+      if (result && result.shouldSave) {
+        console.log('Saving active timer before quit...');
+        
+        const startTime = new Date(result.start_time);
+        const endTime = new Date(result.end_time);
+        const durationMs = endTime - startTime;
+        const durationMinutes = Math.round(durationMs / (1000 * 60));
+        const roundedDuration = Math.max(5, Math.round(durationMinutes / 5) * 5);
+        
+        const timeEntry = {
+          project_id: result.project_id,
+          description: result.description,
+          start_time: result.start_time,
+          end_time: result.end_time,
+          duration: roundedDuration
+        };
+        
+        await database.addTimeEntry(timeEntry);
+        console.log('Active timer saved successfully before quit');
+        
+        // Clear the active timer from localStorage
+        await mainWindow.webContents.executeJavaScript(`
+          localStorage.removeItem('activeTimer');
+        `);
+      }
+    }
+  } catch (error) {
+    console.error('Error saving active sessions before quit:', error);
+  }
+});
+
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
