@@ -20,5 +20,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Version operations
   getDatabaseVersion: () => ipcRenderer.invoke('get-database-version'),
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
+  // BLE device operations
+  getBleDevices: () => ipcRenderer.invoke('get-ble-devices'),
+  addBleDevice: (device) => ipcRenderer.invoke('add-ble-device', device),
+  updateBleDevice: (device) => ipcRenderer.invoke('update-ble-device', device),
+  deleteBleDevice: (id) => ipcRenderer.invoke('delete-ble-device', id),
+  
+  // Office presence operations
+  getOfficePresence: (filters) => ipcRenderer.invoke('get-office-presence', filters),
+  addOfficePresence: (presence) => ipcRenderer.invoke('add-office-presence', presence),
+  updateOfficePresence: (presence) => ipcRenderer.invoke('update-office-presence', presence),
+  deleteOfficePresence: (id) => ipcRenderer.invoke('delete-office-presence', id),
+  getOfficePresenceSummary: (filters) => ipcRenderer.invoke('get-office-presence-summary', filters),
+  
+  // BLE scanning operations
+  startBleScan: () => ipcRenderer.invoke('start-ble-scan'),
+  stopBleScan: () => ipcRenderer.invoke('stop-ble-scan'),
+  triggerImmediateScan: () => ipcRenderer.invoke('trigger-immediate-scan'),
+  getDiscoveredDevices: () => ipcRenderer.invoke('get-discovered-devices'),
+  getCurrentPresenceStatus: () => ipcRenderer.invoke('get-current-presence-status'),
+  enablePresenceMonitoring: (enabled) => ipcRenderer.invoke('enable-presence-monitoring', enabled),
+  setPresenceSaveInterval: (intervalMinutes) => ipcRenderer.invoke('set-presence-save-interval', intervalMinutes),
+  getPresenceSaveInterval: () => ipcRenderer.invoke('get-presence-save-interval'),
+  
+  // Event listeners for BLE events
+  onBleDeviceDiscovered: (callback) => ipcRenderer.on('ble-device-discovered', callback),
+  onBleDevicesCleared: (callback) => ipcRenderer.on('ble-devices-cleared', callback),
+  onBleScanStopped: (callback) => ipcRenderer.on('ble-scan-stopped', callback),
+  onPresenceStatusUpdated: (callback) => ipcRenderer.on('presence-status-updated', callback),
+  onPresenceDataUpdated: (callback) => ipcRenderer.on('presence-data-updated', callback),
+  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 });
