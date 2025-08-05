@@ -26,10 +26,10 @@ Author(s) :
 ![docs/images/Projects.png](docs/images/Projects.png)
 
 ### Office Presence
-![Office Presence Real-time Tracking](https://github.com/user-attachments/assets/38fa1926-7467-41c9-88dd-2f64590621e9)
+![Office Presence Real-time Tracking](docs/images/OfficePresence.png)
 
 ### Configurable Presence Settings
-![Configurable Presence Settings](https://github.com/user-attachments/assets/432c8f0d-8b5d-47ed-9947-267cf0c7d1ff)
+![Configurable Presence Settings](docs/images/BLESettings.jpeg)
 
 ## Features
 
