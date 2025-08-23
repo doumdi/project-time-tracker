@@ -21,13 +21,32 @@ const ChartsView = ({ timeEntries, projects }) => {
   const [chartType, setChartType] = useState('projects'); // 'projects', 'weekly', 'daily'
   const [dateRange, setDateRange] = useState('last4weeks'); // 'last4weeks', 'thisMonth', 'all'
   const [filteredEntries, setFilteredEntries] = useState([]);
+  const [presenceData, setPresenceData] = useState([]);
+  const [filteredPresence, setFilteredPresence] = useState([]);
+
+  useEffect(() => {
+    loadPresenceData();
+  }, []);
 
   useEffect(() => {
     filterEntriesByDateRange();
-  }, [timeEntries, dateRange]);
+  }, [timeEntries, presenceData, dateRange]);
+
+  const loadPresenceData = async () => {
+    try {
+      if (window.electronAPI && window.electronAPI.getOfficePresence) {
+        const presence = await window.electronAPI.getOfficePresence();
+        setPresenceData(presence || []);
+      }
+    } catch (error) {
+      console.error('Failed to load presence data:', error);
+      setPresenceData([]);
+    }
+  };
 
   const filterEntriesByDateRange = () => {
     let filtered = [...timeEntries];
+    let filteredPresenceData = [...presenceData];
     const now = new Date();
 
     switch (dateRange) {
@@ -36,11 +55,17 @@ const ChartsView = ({ timeEntries, projects }) => {
         filtered = filtered.filter(entry => 
           parseISO(entry.start_time) >= fourWeeksAgo
         );
+        filteredPresenceData = filteredPresenceData.filter(presence => 
+          parseISO(presence.start_time) >= fourWeeksAgo
+        );
         break;
       case 'thisMonth':
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         filtered = filtered.filter(entry => 
           parseISO(entry.start_time) >= startOfMonth
+        );
+        filteredPresenceData = filteredPresenceData.filter(presence => 
+          parseISO(presence.start_time) >= startOfMonth
         );
         break;
       case 'all':
@@ -49,6 +74,7 @@ const ChartsView = ({ timeEntries, projects }) => {
     }
 
     setFilteredEntries(filtered);
+    setFilteredPresence(filteredPresenceData);
   };
 
   const formatDuration = (minutes) => {
@@ -133,30 +159,51 @@ const ChartsView = ({ timeEntries, projects }) => {
         return entryDate >= weekStart && entryDate <= weekEnd;
       });
 
+      const weekPresence = filteredPresence.filter(presence => {
+        const presenceDate = parseISO(presence.start_time);
+        return presenceDate >= weekStart && presenceDate <= weekEnd;
+      });
+
       const totalMinutes = weekEntries.reduce((total, entry) => total + (entry.duration || 0), 0);
+      const presenceMinutes = weekPresence.reduce((total, presence) => total + (presence.duration || 0), 0);
       
       weeks.push({
         label: format(weekStart, 'MMM dd'),
         totalMinutes,
-        entryCount: weekEntries.length
+        presenceMinutes,
+        entryCount: weekEntries.length,
+        presenceCount: weekPresence.length
       });
     }
 
-    if (weeks.every(week => week.totalMinutes === 0)) {
+    if (weeks.every(week => week.totalMinutes === 0 && week.presenceMinutes === 0)) {
       return null;
+    }
+
+    const datasets = [
+      {
+        label: 'Time Tracking',
+        data: weeks.map(week => (week.totalMinutes / 60).toFixed(1)),
+        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+        borderColor: 'rgba(102, 126, 234, 1)',
+        borderWidth: 2,
+      }
+    ];
+
+    // Add presence dataset if there's any presence data
+    if (weeks.some(week => week.presenceMinutes > 0)) {
+      datasets.push({
+        label: 'Office Presence',
+        data: weeks.map(week => (week.presenceMinutes / 60).toFixed(1)),
+        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+        borderColor: 'rgba(255, 159, 64, 1)',
+        borderWidth: 2,
+      });
     }
 
     const data = {
       labels: weeks.map(week => week.label),
-      datasets: [
-        {
-          label: 'Hours',
-          data: weeks.map(week => (week.totalMinutes / 60).toFixed(1)),
-          backgroundColor: 'rgba(102, 126, 234, 0.6)',
-          borderColor: 'rgba(102, 126, 234, 1)',
-          borderWidth: 2,
-        },
-      ],
+      datasets
     };
 
     const options = {
@@ -168,13 +215,17 @@ const ChartsView = ({ timeEntries, projects }) => {
         },
         title: {
           display: true,
-          text: 'Weekly Time Tracking',
+          text: 'Weekly Time Tracking & Office Presence',
         },
         tooltip: {
           callbacks: {
             label: function(context) {
               const week = weeks[context.dataIndex];
-              return `Week of ${week.label}: ${formatDuration(week.totalMinutes)} (${week.entryCount} entries)`;
+              if (context.datasetIndex === 0) {
+                return `Week of ${week.label}: ${formatDuration(week.totalMinutes)} (${week.entryCount} entries)`;
+              } else {
+                return `Week of ${week.label}: ${formatDuration(week.presenceMinutes)} presence (${week.presenceCount} sessions)`;
+              }
             }
           }
         }
@@ -207,35 +258,61 @@ const ChartsView = ({ timeEntries, projects }) => {
         return entryDate.toDateString() === day.toDateString();
       });
 
+      const dayPresence = filteredPresence.filter(presence => {
+        const presenceDate = parseISO(presence.start_time);
+        return presenceDate.toDateString() === day.toDateString();
+      });
+
       const totalMinutes = dayEntries.reduce((total, entry) => total + (entry.duration || 0), 0);
+      const presenceMinutes = dayPresence.reduce((total, presence) => total + (presence.duration || 0), 0);
       
       days.push({
         label: format(day, 'MMM dd'),
         totalMinutes,
-        entryCount: dayEntries.length
+        presenceMinutes,
+        entryCount: dayEntries.length,
+        presenceCount: dayPresence.length
       });
     }
 
-    if (days.every(day => day.totalMinutes === 0)) {
+    if (days.every(day => day.totalMinutes === 0 && day.presenceMinutes === 0)) {
       return null;
+    }
+
+    const datasets = [
+      {
+        label: 'Time Tracking',
+        data: days.map(day => (day.totalMinutes / 60).toFixed(1)),
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        tension: 0.1,
+        pointBackgroundColor: 'rgb(75, 192, 192)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+      }
+    ];
+
+    // Add presence dataset if there's any presence data
+    if (days.some(day => day.presenceMinutes > 0)) {
+      datasets.push({
+        label: 'Office Presence',
+        data: days.map(day => (day.presenceMinutes / 60).toFixed(1)),
+        fill: false,
+        borderColor: 'rgb(255, 159, 64)',
+        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+        tension: 0.1,
+        pointBackgroundColor: 'rgb(255, 159, 64)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+      });
     }
 
     const data = {
       labels: days.map(day => day.label),
-      datasets: [
-        {
-          label: 'Hours',
-          data: days.map(day => (day.totalMinutes / 60).toFixed(1)),
-          fill: false,
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-          tension: 0.1,
-          pointBackgroundColor: 'rgb(75, 192, 192)',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-        },
-      ],
+      datasets
     };
 
     const options = {
@@ -247,13 +324,17 @@ const ChartsView = ({ timeEntries, projects }) => {
         },
         title: {
           display: true,
-          text: 'Daily Time Tracking (Last 14 Days)',
+          text: 'Daily Time Tracking & Office Presence (Last 14 Days)',
         },
         tooltip: {
           callbacks: {
             label: function(context) {
               const day = days[context.dataIndex];
-              return `${day.label}: ${formatDuration(day.totalMinutes)} (${day.entryCount} entries)`;
+              if (context.datasetIndex === 0) {
+                return `${day.label}: ${formatDuration(day.totalMinutes)} (${day.entryCount} entries)`;
+              } else {
+                return `${day.label}: ${formatDuration(day.presenceMinutes)} presence (${day.presenceCount} sessions)`;
+              }
             }
           }
         }
@@ -347,7 +428,7 @@ const ChartsView = ({ timeEntries, projects }) => {
       return (
         <div className="empty-state">
           <h3>No Data Available</h3>
-          <p>No time entries found for the selected date range.</p>
+          <p>No time entries or presence data found for the selected date range.</p>
         </div>
       );
     }
@@ -370,11 +451,23 @@ const ChartsView = ({ timeEntries, projects }) => {
     )).size;
     const averagePerDay = uniqueDays > 0 ? totalMinutes / uniqueDays : 0;
 
+    // Presence statistics
+    const totalPresenceMinutes = filteredPresence.reduce((total, presence) => total + (presence.duration || 0), 0);
+    const totalPresenceSessions = filteredPresence.length;
+    const uniquePresenceDays = new Set(filteredPresence.map(presence => 
+      format(parseISO(presence.start_time), 'yyyy-MM-dd')
+    )).size;
+    const averagePresencePerDay = uniquePresenceDays > 0 ? totalPresenceMinutes / uniquePresenceDays : 0;
+
     return {
       totalMinutes,
       totalEntries,
       uniqueDays,
-      averagePerDay
+      averagePerDay,
+      totalPresenceMinutes,
+      totalPresenceSessions,
+      uniquePresenceDays,
+      averagePresencePerDay
     };
   };
 
@@ -449,6 +542,39 @@ const ChartsView = ({ timeEntries, projects }) => {
             </div>
             <div style={{ fontSize: '0.9rem', color: '#666' }}>{t('charts.averagePerDay')}</div>
           </div>
+
+          {/* Presence stats - only show if there's presence data */}
+          {stats.totalPresenceMinutes > 0 && (
+            <>
+              <div style={{ padding: '1rem', background: '#fff8e1', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff9800' }}>
+                  {formatDuration(stats.totalPresenceMinutes)}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Presence Time</div>
+              </div>
+              
+              <div style={{ padding: '1rem', background: '#f3e5f5', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#9c27b0' }}>
+                  {stats.totalPresenceSessions}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Presence Sessions</div>
+              </div>
+              
+              <div style={{ padding: '1rem', background: '#e8f5e8', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>
+                  {stats.uniquePresenceDays}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Presence Days</div>
+              </div>
+              
+              <div style={{ padding: '1rem', background: '#e3f2fd', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2196f3' }}>
+                  {formatDuration(Math.round(stats.averagePresencePerDay))}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Avg Presence/Day</div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Chart */}
