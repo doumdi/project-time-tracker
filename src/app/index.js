@@ -7,6 +7,7 @@ import ProjectManager from '../components/ProjectManager';
 import TimeEntryList from '../components/TimeEntryList';
 import CalendarView from '../components/CalendarView';
 import ChartsView from '../components/ChartsView';
+import ReportsView from '../components/ReportsView';
 import OfficePresenceView from '../components/OfficePresenceView';
 import Settings from '../components/Settings';
 import './styles.css';
@@ -46,6 +47,7 @@ const AppContent = () => {
     { id: 'entries', label: t('app.tabs.entries'), component: TimeEntryList },
     { id: 'calendar', label: t('app.tabs.calendar'), component: CalendarView },
     { id: 'charts', label: t('app.tabs.charts'), component: ChartsView },
+    { id: 'reports', label: t('app.tabs.reports'), component: ReportsView },
     { id: 'presence', label: t('app.tabs.presence'), component: OfficePresenceView },
     { id: 'settings', label: t('app.tabs.settings'), component: Settings }
   ];
