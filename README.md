@@ -11,30 +11,32 @@ Author(s) :
 ## Screenshots
 
 ### Time Tracker
-![docs/images/TimeTracker](docs/images/TimeTracker.png)
+![Time Tracker Interface](docs/images/TimeTracker.png)
 
 ### Charts
-![docs/images/Charts.png](docs/images/Charts.png)
+![Charts and Analytics View](docs/images/Charts.png)
 
 ### Parameters
-![docs/images/Parameters.png](docs/images/Parameters.png)
+![Settings and Configuration](docs/images/Parameters.png)
 
 ### Time Entries
-![docs/images/TimeEntries.png](docs/images/TimeEntries.png)
+![Time Entries List View](docs/images/TimeEntries.png)
 
 ### Projects
-![docs/images/Projects.png](docs/images/Projects.png)
+![Project Management Interface](docs/images/Projects.png)
 
 ### Office Presence
 ![Office Presence Real-time Tracking](docs/images/OfficePresence.png)
 
 ### Configurable Presence Settings
-![Configurable Presence Settings](docs/images/BLESettings.jpeg)
+![Configurable Presence Settings](docs/images/BLESettings.png)
 
 ## Features
 
 - ✅ **Cross-platform** - Works on Windows, macOS, and Linux
 - ✅ **Project Management** - Add, edit, and delete projects with custom colors
+- ✅ **Project Budgets & Earnings Tracking** - Set project budgets, track earnings based on hourly rates, and monitor remaining budget/hours
+- ✅ **Multi-Currency Support** - Support for 20+ currencies with configurable hourly rates
 - ✅ **Time Tracking** - Live timer with 5-minute precision rounding
 - ✅ **Quick Entry** - Add past time entries manually
 - ✅ **Office Presence Detection** - Automatic presence tracking using Bluetooth Low Energy (BLE) devices
@@ -50,6 +52,7 @@ Author(s) :
 - ✅ **Multiple Views** - Table view, calendar view (month/week/day), and charts
 - ✅ **Charts & Analytics** - Visual representations of time data
 - ✅ **Local Database** - SQLite database that's easy to backup and move
+- ✅ **Internationalization** - English and French language support
 - ✅ **Modern UI** - Clean, responsive design with real-time updates
 
 ## Technology Stack
@@ -173,7 +176,8 @@ src/
 │   ├── BleDevicesView.js        # BLE device management with real-time discovery
 │   └── Settings.js              # Settings with configurable presence intervals
 ├── contexts/            # React contexts
-│   └── LanguageContext.js       # Internationalization support
+│   ├── LanguageContext.js       # Internationalization support
+│   └── SettingsContext.js       # Application settings context
 ├── database/           # Database operations
 │   └── db.js          # SQLite database interface
 ├── translations/       # Localization files
@@ -226,19 +230,19 @@ src/
 ### Windows
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker Setup 1.0.2.exe
+# Creates: dist/Project Time Tracker Setup 1.0.4.exe
 ```
 
 ### macOS
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker-1.0.2.dmg
+# Creates: dist/Project Time Tracker-1.0.4.dmg
 ```
 
 ### Linux
 ```bash
 npm run dist
-# Creates: dist/Project Time Tracker-1.0.2.AppImage
+# Creates: dist/Project Time Tracker-1.0.4.AppImage
 ```
 
 ## Troubleshooting
