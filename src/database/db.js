@@ -214,167 +214,26 @@ function runMigrations() {
 
 function applyMigration(version) {
   return new Promise((resolve, reject) => {
-    // Define migrations for each version
-    let migrationSql = '';
-    
-    switch (version) {
-      case 1:
-        // Version 1: Initial version, no migration needed as tables are already created
-        console.log('Migration v1: Initial database structure');
-        resolve();
-        return;
-      case 2:
-        // Version 2: Add budget column to projects table
-        console.log('Migration v2: Adding budget column to projects table');
-        migrationSql = `
-          ALTER TABLE projects ADD COLUMN budget DECIMAL(10,2) DEFAULT 0;
-        `;
-        // Use a different approach - check if column exists first
-        db.get("PRAGMA table_info(projects)", (err, result) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          
-          // Check if budget column already exists
-          db.all("PRAGMA table_info(projects)", (err, columns) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            
-            const budgetColumnExists = columns.some(col => col.name === 'budget');
-            
-            if (budgetColumnExists) {
-              console.log('Budget column already exists, skipping migration');
-              resolve();
-            } else {
-              db.exec(migrationSql, (err) => {
-                if (err) {
-                  console.error(`Migration v2 failed:`, err);
-                  reject(err);
-                } else {
-                  console.log(`Migration v2 completed successfully`);
-                  resolve();
-                }
-              });
-            }
-          });
-        });
-        return; // Exit early since we handle the async logic above
-        break;
-      case 3:
-        // Version 3: Add start_date and end_date columns to projects table
-        console.log('Migration v3: Adding start_date and end_date columns to projects table');
-        
-        db.all("PRAGMA table_info(projects)", (err, columns) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          
-          const startDateExists = columns.some(col => col.name === 'start_date');
-          const endDateExists = columns.some(col => col.name === 'end_date');
-          
-          let migrations = [];
-          
-          if (!startDateExists) {
-            migrations.push('ALTER TABLE projects ADD COLUMN start_date DATE;');
-          }
-          
-          if (!endDateExists) {
-            migrations.push('ALTER TABLE projects ADD COLUMN end_date DATE;');
-          }
-          
-          if (migrations.length === 0) {
-            console.log('Start date and end date columns already exist, skipping migration');
-            resolve();
-          } else {
-            const migrationSql = migrations.join('\n');
-            db.exec(migrationSql, (err) => {
-              if (err) {
-                console.error(`Migration v3 failed:`, err);
-                reject(err);
-              } else {
-                console.log(`Migration v3 completed successfully`);
-                resolve();
-              }
-            });
-          }
-        });
-        return; // Exit early since we handle the async logic above
-        break;
-      case 4:
-        // Version 4: Add office presence and BLE devices tables
-        console.log('Migration v4: Adding office presence and BLE devices tables');
-        
-        const createBleDevicesTable = `
-          CREATE TABLE IF NOT EXISTS ble_devices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            mac_address TEXT UNIQUE NOT NULL,
-            device_type TEXT DEFAULT 'unknown',
-            is_enabled BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          );
-        `;
-        
-        const createOfficePresenceTable = `
-          CREATE TABLE IF NOT EXISTS office_presence (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date DATE NOT NULL,
-            start_time DATETIME NOT NULL,
-            end_time DATETIME,
-            duration INTEGER NOT NULL, -- Duration in minutes
-            device_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
-          );
-        `;
-        
-        db.serialize(() => {
-          db.run(createBleDevicesTable, (err) => {
-            if (err) {
-              console.error(`Migration v4 failed (ble_devices table):`, err);
-              reject(err);
-              return;
-            }
-            console.log('BLE devices table created successfully');
-          });
-          
-          db.run(createOfficePresenceTable, (err) => {
-            if (err) {
-              console.error(`Migration v4 failed (office_presence table):`, err);
-              reject(err);
-              return;
-            }
-            console.log('Office presence table created successfully');
-            console.log(`Migration v4 completed successfully`);
-            resolve();
-          });
-        });
-        return;
-        break;
-      default:
+    try {
+      // Load migration file for the specific version
+      const migrationPath = path.join(__dirname, 'upgrades', `v${version}.js`);
+      
+      // Check if migration file exists
+      if (!fs.existsSync(migrationPath)) {
         console.log(`No migration defined for version ${version}`);
         resolve();
         return;
-    }
-    
-    if (migrationSql) {
-      db.exec(migrationSql, (err) => {
-        if (err) {
-          console.error(`Migration v${version} failed:`, err);
-          reject(err);
-        } else {
-          console.log(`Migration v${version} completed successfully`);
-          resolve();
-        }
-      });
-    } else {
-      resolve();
+      }
+      
+      // Require and execute the migration
+      const migrationFunction = require(migrationPath);
+      migrationFunction(db)
+        .then(() => resolve())
+        .catch((err) => reject(err));
+        
+    } catch (err) {
+      console.error(`Failed to load migration for version ${version}:`, err);
+      reject(err);
     }
   });
 }

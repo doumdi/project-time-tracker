@@ -57,27 +57,48 @@ When you need to modify the database schema:
 1. **Increment Database Version**:
    ```javascript
    // In src/database/db.js
-   const CURRENT_DB_VERSION = 2; // Increment this
+   const CURRENT_DB_VERSION = 5; // Increment this
    ```
 
-2. **Add Migration Logic**:
+2. **Create New Migration File**:
+   Create a new file `src/database/upgrades/v5.js`:
    ```javascript
-   function applyMigration(version) {
+   /**
+    * Database Migration v5: Add project status tracking
+    * 
+    * This migration adds status tracking to projects.
+    * Users can now mark projects as active, completed, or on-hold.
+    * 
+    * Changes:
+    * - Add 'status' column to projects table (TEXT, default 'active')
+    * - Add index for efficient status queries
+    * 
+    * @param {sqlite3.Database} db - SQLite database instance
+    * @returns {Promise} - Resolves when migration is complete
+    */
+   function applyV5Migration(db) {
      return new Promise((resolve, reject) => {
-       let migrationSql = '';
+       console.log('Migration v5: Adding project status tracking');
        
-       switch (version) {
-         case 1:
-           // Initial version
+       const migrationSql = `
+         ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'active';
+         CREATE INDEX idx_projects_status ON projects(status);
+       `;
+       
+       db.exec(migrationSql, (err) => {
+         if (err) {
+           console.error('Migration v5 failed:', err);
+           reject(err);
+         } else {
+           console.log('Migration v5 completed successfully');
            resolve();
-           return;
-         case 2:
-           // Your new migration
-           migrationSql = `
-             ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'active';
-             CREATE INDEX idx_projects_status ON projects(status);
-           `;
-           break;
+         }
+       });
+     });
+   }
+   
+   module.exports = applyV5Migration;
+   ```
          default:
            resolve();
            return;
@@ -150,6 +171,11 @@ useEffect(() => {
 
 - `version.json`: App version configuration
 - `src/database/db.js`: Database versioning and migration logic
+- `src/database/upgrades/`: Directory containing individual migration files
+  - `v1.js`: Initial database structure migration
+  - `v2.js`: Add budget column to projects
+  - `v3.js`: Add start_date and end_date columns to projects
+  - `v4.js`: Add BLE devices and office presence tables
 - `src/main.js`: IPC handlers for version functions
 - `src/preload.js`: Frontend API exposure
 - `src/components/Settings.js`: Version display in UI
