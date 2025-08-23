@@ -53,25 +53,33 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async (event) => {
-  console.log('App is about to quit, checking for active sessions...');
-  
+  console.log('App is about to quit, checking for active sessions and cleaning up resources...');
+
+  // Stop presence monitoring and BLE timers first to prevent async callbacks touching the DB during shutdown
+  try {
+    await stopPresenceMonitoring();
+  } catch (err) {
+    console.warn('Error while stopping presence monitoring during shutdown:', err);
+  }
+
   try {
     // Check if there's an active presence session and save it
     if (bleState.activePresenceSession) {
       console.log('Saving active presence session before quit...');
       await endPresenceSession();
     }
-    
+  } catch (err) {
+    console.warn('Error saving active presence session during shutdown:', err);
+  }
+
+  try {
     // Check if there's an active timer in the frontend and save it
-    // We'll need to communicate with the renderer process to check this
     if (mainWindow && !mainWindow.isDestroyed()) {
       // Send a message to the renderer to save any active timer
       const result = await mainWindow.webContents.executeJavaScript(`
-        // Check if there's an active timer in localStorage or component state
         const activeTimer = localStorage.getItem('activeTimer');
         if (activeTimer) {
           const timerData = JSON.parse(activeTimer);
-          // If timer is active, save it
           if (timerData.isTracking && timerData.startTime && timerData.selectedProject) {
             return {
               shouldSave: true,
@@ -84,16 +92,16 @@ app.on('before-quit', async (event) => {
         }
         return { shouldSave: false };
       `);
-      
+
       if (result && result.shouldSave) {
         console.log('Saving active timer before quit...');
-        
+
         const startTime = new Date(result.start_time);
         const endTime = new Date(result.end_time);
         const durationMs = endTime - startTime;
         const durationMinutes = Math.round(durationMs / (1000 * 60));
         const roundedDuration = Math.max(5, Math.round(durationMinutes / 5) * 5);
-        
+
         const timeEntry = {
           project_id: result.project_id,
           description: result.description,
@@ -101,18 +109,33 @@ app.on('before-quit', async (event) => {
           end_time: result.end_time,
           duration: roundedDuration
         };
-        
-        await database.addTimeEntry(timeEntry);
-        console.log('Active timer saved successfully before quit');
-        
+
+        try {
+          await database.addTimeEntry(timeEntry);
+          console.log('Active timer saved successfully before quit');
+        } catch (err) {
+          console.error('Failed to save active timer during shutdown:', err);
+        }
+
         // Clear the active timer from localStorage
-        await mainWindow.webContents.executeJavaScript(`
-          localStorage.removeItem('activeTimer');
-        `);
+        try {
+          await mainWindow.webContents.executeJavaScript(`localStorage.removeItem('activeTimer');`);
+        } catch (err) {
+          console.warn('Could not clear activeTimer from renderer during shutdown:', err);
+        }
       }
     }
   } catch (error) {
     console.error('Error saving active sessions before quit:', error);
+  }
+
+  // Finally, close the database after all async activity and timers have been stopped
+  try {
+    if (database && typeof database.closeDatabase === 'function') {
+      await database.closeDatabase();
+    }
+  } catch (err) {
+    console.error('Error closing database during shutdown:', err);
   }
 });
 

@@ -28,6 +28,40 @@ if (!fs.existsSync(userDataPath)) {
 let db;
 let isInitialized = false;
 
+// Close database and cleanup
+function closeDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      isInitialized = false;
+      resolve();
+      return;
+    }
+
+    try {
+      // Attempt to close the database. This will wait for pending statements to finish.
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing database:', err);
+          reject(err);
+        } else {
+          console.log('Closed SQLite database');
+          isInitialized = false;
+          db = null;
+          resolve();
+        }
+      });
+    } catch (err) {
+      console.error('Unexpected error while closing database:', err);
+      // Ensure state is cleaned up even on unexpected errors
+      try {
+        isInitialized = false;
+        db = null;
+      } catch (e) {}
+      reject(err);
+    }
+  });
+}
+
 // Initialize database
 function initDatabase() {
   if (isInitialized) {
