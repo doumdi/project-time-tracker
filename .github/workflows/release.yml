@@ -2,8 +2,9 @@ name: Create Draft Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+  workflow_dispatch:
 
 jobs:
   prepare-release:
