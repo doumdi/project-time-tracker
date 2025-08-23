@@ -53,9 +53,6 @@ function closeDatabase() {
     } catch (err) {
       console.error('Unexpected error while closing database:', err);
       // Ensure state is cleaned up even on unexpected errors
-      } catch (e) {
-        console.error('Error during database cleanup:', e);
-      }
       reject(err);
     }
   });

@@ -41,22 +41,9 @@ app.whenReady().then(() => {
   if (mainWindow) {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
-        // Request the saved preference from the renderer's localStorage via IPC
-        const stored = await mainWindow.webContents.send('get-office-presence-enabled');
-        // The renderer (preload.js) should listen for 'get-office-presence-enabled' and reply with the value
-        // See preload.js for the corresponding handler:
-        // ipcRenderer.on('get-office-presence-enabled', async (event) => {
-        //   const value = localStorage.getItem('officePresenceEnabled');
-        //   event.sender.send('office-presence-enabled-value', value);
-        // });
-        // In main.js, listen for the reply:
-        // ipcMain.on('office-presence-enabled-value', (event, stored) => { ... });
-        // For simplicity, you may use invoke/handle pattern with ipcRenderer.invoke and ipcMain.handle.
-        // Example:
-        // In main.js:
-        // const stored = await mainWindow.webContents.send('get-office-presence-enabled');
-        // In preload.js:
-        // ipcRenderer.handle('get-office-presence-enabled', () => localStorage.getItem('officePresenceEnabled'));
+        // Read the saved preference directly from the renderer's localStorage.
+        // webContents.send does not return a value; use executeJavaScript to query localStorage.
+        const stored = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
         const enabled = stored === 'true';
 
         console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', stored);
