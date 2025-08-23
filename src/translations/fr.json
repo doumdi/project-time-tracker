@@ -7,6 +7,7 @@
       "entries": "📝 Entrées de Temps",
       "calendar": "📅 Calendrier",
       "charts": "📊 Graphiques",
+      "reports": "📋 Rapports",
       "presence": "🏢 Présence Bureau",
       "settings": "⚙️ Paramètres"
     }
@@ -184,6 +185,18 @@
     "todayTotal": "Total Aujourd'hui",
     "currentSessionTime": "Temps de Session Actuelle",
     "detectedFor": "Détecté depuis"
+  },
+  "reports": {
+    "title": "Rapports",
+    "startDate": "Date de Début",
+    "endDate": "Date de Fin", 
+    "selectProjects": "Sélectionner Projets",
+    "allProjects": "Tous les Projets",
+    "generatePDF": "Générer Rapport PDF",
+    "generating": "Génération...",
+    "preview": "Aperçu",
+    "noEntries": "Aucune entrée de temps trouvée pour les critères sélectionnés.",
+    "showingFirst100": "Affichage des 100 premiers sur"
   },
   "bleDevices": {
     "title": "Configuration des Appareils BLE",

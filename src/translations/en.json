@@ -7,6 +7,7 @@
       "entries": "📝 Time Entries",
       "calendar": "📅 Calendar",
       "charts": "📊 Charts",
+      "reports": "📋 Reports",
       "presence": "🏢 Office Presence",
       "settings": "⚙️ Settings"
     }
@@ -184,6 +185,18 @@
     "todayTotal": "Today's Total",
     "currentSessionTime": "Current Session Time",
     "detectedFor": "Detected for"
+  },
+  "reports": {
+    "title": "Reports",
+    "startDate": "Start Date",
+    "endDate": "End Date", 
+    "selectProjects": "Select Projects",
+    "allProjects": "All Projects",
+    "generatePDF": "Generate PDF Report",
+    "generating": "Generating...",
+    "preview": "Preview",
+    "noEntries": "No time entries found for the selected criteria.",
+    "showingFirst100": "Showing first 100 of"
   },
   "bleDevices": {
     "title": "BLE Device Configuration",
