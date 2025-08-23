@@ -34,16 +34,34 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
   
-  // Check if presence monitoring should be started
-  setTimeout(async () => {
-    try {
-      const stored = JSON.parse(JSON.stringify({}));
-      // We'll check localStorage in the renderer process instead
-      // For now, we'll let the renderer process control this
-    } catch (error) {
-      console.error('Error checking presence monitoring settings:', error);
-    }
-  }, 2000);
+  // After the renderer finishes loading, check renderer localStorage for the
+  // user's saved preference and start presence monitoring automatically if enabled.
+  // This makes BLE scanning start immediately when the app opens (when the
+  // user previously enabled office presence in settings).
+  if (mainWindow) {
+    mainWindow.webContents.on('did-finish-load', async () => {
+      try {
+        // Read the saved preference from the renderer's localStorage
+        const stored = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled')");
+        const enabled = stored === 'true';
+
+        console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', stored);
+
+        if (enabled) {
+          // Start presence monitoring in the main process. The function will
+          // no-op if noble is not available or if there are no monitored devices.
+          try {
+            await startPresenceMonitoring();
+            console.log('[MAIN] Presence monitoring started automatically on app launch');
+          } catch (err) {
+            console.error('[MAIN] Failed to start presence monitoring on launch:', err);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking presence monitoring settings from renderer:', error);
+      }
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
