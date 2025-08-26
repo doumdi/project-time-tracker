@@ -279,6 +279,31 @@ ipcMain.handle('get-office-presence-summary', async (event, filters) => {
   return await database.getOfficePresenceSummary(filters);
 });
 
+// Task IPC handlers
+ipcMain.handle('get-tasks', async (event, filters) => {
+  return await database.getTasks(filters);
+});
+
+ipcMain.handle('add-task', async (event, task) => {
+  return await database.addTask(task);
+});
+
+ipcMain.handle('update-task', async (event, task) => {
+  return await database.updateTask(task);
+});
+
+ipcMain.handle('delete-task', async (event, id) => {
+  return await database.deleteTask(id);
+});
+
+ipcMain.handle('set-active-task', async (event, taskId) => {
+  return await database.setActiveTask(taskId);
+});
+
+ipcMain.handle('get-active-task', async () => {
+  return await database.getActiveTask();
+});
+
 // BLE scanning IPC handlers
 ipcMain.handle('start-ble-scan', async () => {
   if (!noble) {

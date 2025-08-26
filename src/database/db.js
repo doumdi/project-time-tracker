@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 4;
+const CURRENT_DB_VERSION = 5;
 
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
@@ -702,6 +702,155 @@ function getOfficePresenceSummary(filters = {}) {
   });
 }
 
+// Task operations
+function getTasks(filters = {}) {
+  return new Promise((resolve, reject) => {
+    let sql = `
+      SELECT t.*, p.name as project_name, p.color as project_color
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+    `;
+    
+    const conditions = [];
+    const params = [];
+    
+    if (filters.projectId) {
+      conditions.push('t.project_id = ?');
+      params.push(filters.projectId);
+    }
+    
+    if (filters.isActive !== undefined) {
+      conditions.push('t.is_active = ?');
+      params.push(filters.isActive ? 1 : 0);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    sql += ' ORDER BY t.is_active DESC, t.due_date ASC, t.created_at DESC';
+    
+    if (filters.limit) {
+      sql += ' LIMIT ?';
+      params.push(filters.limit);
+    }
+    
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows.map(row => ({
+          ...row,
+          is_active: Boolean(row.is_active)
+        })));
+      }
+    });
+  });
+}
+
+function addTask(task) {
+  return new Promise((resolve, reject) => {
+    const sql = 'INSERT INTO tasks (name, due_date, project_id, allocated_time) VALUES (?, ?, ?, ?)';
+    const params = [
+      task.name,
+      task.due_date || null,
+      task.project_id || null,
+      task.allocated_time || 0
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ id: this.lastID, ...task });
+      }
+    });
+  });
+}
+
+function updateTask(task) {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE tasks SET name = ?, due_date = ?, project_id = ?, allocated_time = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      task.name,
+      task.due_date || null,
+      task.project_id || null,
+      task.allocated_time || 0,
+      task.is_active ? 1 : 0,
+      task.id
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(task);
+      }
+    });
+  });
+}
+
+function deleteTask(id) {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM tasks WHERE id = ?';
+    
+    db.run(sql, [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ deleted: this.changes > 0 });
+      }
+    });
+  });
+}
+
+function setActiveTask(taskId) {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      // First, deactivate all tasks
+      db.run('UPDATE tasks SET is_active = 0, updated_at = CURRENT_TIMESTAMP', (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Then activate the specified task if provided
+        if (taskId) {
+          db.run('UPDATE tasks SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [taskId], function(err) {
+            if (err) {
+              reject(err);
+            } else {
+              resolve({ taskId, activated: this.changes > 0 });
+            }
+          });
+        } else {
+          resolve({ taskId: null, activated: false });
+        }
+      });
+    });
+  });
+}
+
+function getActiveTask() {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT t.*, p.name as project_name, p.color as project_color
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      WHERE t.is_active = 1
+      LIMIT 1
+    `;
+    
+    db.get(sql, [], (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row ? { ...row, is_active: Boolean(row.is_active) } : null);
+      }
+    });
+  });
+}
+
 // Initialize database when module is loaded
 if (app && app.isReady()) {
   initDatabase();
@@ -733,5 +882,11 @@ module.exports = {
   addOfficePresence,
   updateOfficePresence,
   deleteOfficePresence,
-  getOfficePresenceSummary
+  getOfficePresenceSummary,
+  getTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+  setActiveTask,
+  getActiveTask
 };
