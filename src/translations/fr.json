@@ -177,6 +177,8 @@
     "presenceSaveIntervalDescription": "À quelle fréquence sauvegarder les sessions de présence dans la base de données (1-480 minutes)",
     "configureDevices": "Configurer les Appareils BLE",
     "configureBleDevices": "Configurer les Appareils BLE",
+    "taskDisplayCount": "Nombre de Tâches Affichées",
+    "taskDisplayCountDescription": "Nombre de tâches récentes à afficher dans le Suivi de Temps (1-20)",
     "errorSaving": "Erreur lors de la sauvegarde des paramètres"
   },
   "common": {

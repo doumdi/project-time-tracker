@@ -7,6 +7,8 @@ const ProjectManager = ({ projects, onRefresh }) => {
   const { hourlyRate, formatMoney, calculateEarnings } = useSettings();
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -20,6 +22,34 @@ const ProjectManager = ({ projects, onRefresh }) => {
     '#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0',
     '#607D8B', '#795548', '#E91E63', '#00BCD4', '#8BC34A'
   ];
+
+  // Load tasks when component mounts
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const taskList = await window.electronAPI.getTasks();
+      setTasks(taskList);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    }
+  };
+
+  const toggleProjectExpansion = (projectId) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
+    } else {
+      newExpanded.add(projectId);
+    }
+    setExpandedProjects(newExpanded);
+  };
+
+  const getProjectTasks = (projectId) => {
+    return tasks.filter(task => task.project_id === projectId);
+  };
 
   useEffect(() => {
     if (editingProject) {
@@ -223,6 +253,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
             <table className="table">
               <thead>
                 <tr>
+                  <th></th>
                   <th>{t('entries.project')}</th>
                   <th>{t('entries.description')}</th>
                   <th>{t('projects.startDate')}</th>
@@ -231,14 +262,29 @@ const ProjectManager = ({ projects, onRefresh }) => {
                   <th>{t('projects.budget')}</th>
                   <th>{t('projects.remainingHours')}</th>
                   <th>{t('projects.entries')}</th>
+                  <th>Tasks</th>
                   <th>{t('entries.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {projects.map(project => {
                   const { remainingBudget, remainingHours } = calculateRemainingBudgetAndHours(project);
+                  const projectTasks = getProjectTasks(project.id);
+                  const isExpanded = expandedProjects.has(project.id);
                   return (
-                  <tr key={project.id}>
+                    <React.Fragment key={project.id}>
+                  <tr>
+                    <td>
+                      {projectTasks.length > 0 && (
+                        <button
+                          className="btn btn-small btn-secondary"
+                          onClick={() => toggleProjectExpansion(project.id)}
+                          style={{ padding: '0.25rem', minWidth: '24px' }}
+                        >
+                          {isExpanded ? '−' : '+'}
+                        </button>
+                      )}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div
@@ -259,6 +305,7 @@ const ProjectManager = ({ projects, onRefresh }) => {
                     <td>{project.budget ? formatMoney(project.budget) : '-'}</td>
                     <td>{project.budget && project.budget > 0 ? `${remainingHours.toFixed(1)}h` : '-'}</td>
                     <td>{project.entry_count || 0}</td>
+                    <td>{projectTasks.length}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
@@ -276,6 +323,56 @@ const ProjectManager = ({ projects, onRefresh }) => {
                       </div>
                     </td>
                   </tr>
+                  
+                  {/* Expanded tasks row */}
+                  {isExpanded && projectTasks.length > 0 && (
+                    <tr>
+                      <td colSpan="11" style={{ padding: '0', background: '#f8f9fa' }}>
+                        <div style={{ padding: '1rem' }}>
+                          <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>
+                            Project Tasks ({projectTasks.length})
+                          </h4>
+                          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: '0.9rem' }}>
+                              <thead>
+                                <tr style={{ background: '#e9ecef' }}>
+                                  <th style={{ padding: '0.5rem', textAlign: 'left' }}>Task Name</th>
+                                  <th style={{ padding: '0.5rem', textAlign: 'left' }}>Due Date</th>
+                                  <th style={{ padding: '0.5rem', textAlign: 'left' }}>Allocated Time</th>
+                                  <th style={{ padding: '0.5rem', textAlign: 'left' }}>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {projectTasks.map(task => (
+                                  <tr key={task.id}>
+                                    <td style={{ padding: '0.5rem' }}>
+                                      {task.name}
+                                      {task.is_active && <span style={{ color: '#4CAF50', marginLeft: '0.5rem' }}>●</span>}
+                                    </td>
+                                    <td style={{ padding: '0.5rem' }}>
+                                      {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                                    </td>
+                                    <td style={{ padding: '0.5rem' }}>
+                                      {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
+                                    </td>
+                                    <td style={{ padding: '0.5rem' }}>
+                                      <span style={{ 
+                                        color: task.is_active ? '#4CAF50' : '#666',
+                                        fontWeight: task.is_active ? 'bold' : 'normal'
+                                      }}>
+                                        {task.is_active ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                   );
                 })}
               </tbody>

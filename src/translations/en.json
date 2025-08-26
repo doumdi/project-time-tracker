@@ -177,6 +177,8 @@
     "presenceSaveIntervalDescription": "How often to save presence sessions to database (1-480 minutes)",
     "configureDevices": "Configure BLE Devices",
     "configureBleDevices": "Configure BLE Devices",
+    "taskDisplayCount": "Task Display Count",
+    "taskDisplayCountDescription": "Number of recent tasks to show in Time Tracker (1-20)",
     "errorSaving": "Error saving settings"
   },
   "common": {

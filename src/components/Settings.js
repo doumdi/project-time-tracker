@@ -19,6 +19,7 @@ const Settings = () => {
   const [showBleDevices, setShowBleDevices] = useState(false);
   const [officePresenceEnabled, setOfficePresenceEnabled] = useState(false);
   const [presenceSaveInterval, setPresenceSaveInterval] = useState(15); // Default 15 minutes
+  const [taskDisplayCount, setTaskDisplayCount] = useState(5); // Default 5 tasks
 
   // Load version information
   useEffect(() => {
@@ -109,6 +110,15 @@ const Settings = () => {
     }
   };
 
+  const handleTaskDisplayCountChange = (e) => {
+    const count = parseInt(e.target.value);
+    if (isNaN(count) || count < 1) return;
+    
+    setTaskDisplayCount(count);
+    localStorage.setItem('taskDisplayCount', count.toString());
+    alert(t('settings.settingsSaved'));
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -124,6 +134,12 @@ const Settings = () => {
         }
       } catch (error) {
         console.error('Failed to load presence save interval:', error);
+      }
+      
+      // Load task display count
+      const storedTaskCount = localStorage.getItem('taskDisplayCount');
+      if (storedTaskCount) {
+        setTaskDisplayCount(parseInt(storedTaskCount) || 5);
       }
       
       // Initialize presence monitoring if enabled
@@ -198,6 +214,23 @@ const Settings = () => {
               </select>
               <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
                 {t('settings.selectCurrency')}
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('settings.taskDisplayCount')}</label>
+              <input
+                type="number"
+                className="form-input"
+                value={taskDisplayCount}
+                onChange={handleTaskDisplayCountChange}
+                min="1"
+                max="20"
+                step="1"
+                style={{ maxWidth: '120px' }}
+              />
+              <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                {t('settings.taskDisplayCountDescription')}
               </small>
             </div>
 
