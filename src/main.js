@@ -43,12 +43,12 @@ app.whenReady().then(() => {
       try {
         // Read the saved preference directly from the renderer's localStorage.
         // webContents.send does not return a value; use executeJavaScript to query localStorage.
-        const stored = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
-        const enabled = stored === 'true';
+        const storedPresence = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
+        const presenceEnabled = storedPresence === 'true';
 
-        console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', stored);
+        console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', storedPresence);
 
-        if (enabled) {
+        if (presenceEnabled) {
           // Start presence monitoring in the main process. The function will
           // no-op if noble is not available or if there are no monitored devices.
           try {
@@ -58,8 +58,27 @@ app.whenReady().then(() => {
             console.error('[MAIN] Failed to start presence monitoring on launch:', err);
           }
         }
+
+        // Check MCP server settings and start automatically if enabled
+        const storedMcpServer = await mainWindow.webContents.executeJavaScript("localStorage.getItem('mcpServerEnabled');");
+        const mcpEnabled = storedMcpServer === 'true';
+
+        console.log('[MAIN] mcpServerEnabled (from renderer localStorage):', storedMcpServer);
+
+        if (mcpEnabled) {
+          // Get the stored port or use default
+          const storedMcpPort = await mainWindow.webContents.executeJavaScript("localStorage.getItem('mcpServerPort');");
+          const mcpPort = storedMcpPort ? parseInt(storedMcpPort) : 3001;
+          
+          try {
+            await startMcpServer(mcpPort);
+            console.log('[MAIN] MCP server started automatically on app launch on port', mcpPort);
+          } catch (err) {
+            console.error('[MAIN] Failed to start MCP server on launch:', err);
+          }
+        }
       } catch (error) {
-        console.error('Error checking presence monitoring settings from renderer:', error);
+        console.error('Error checking settings from renderer:', error);
       }
     });
   }
@@ -486,15 +505,22 @@ ipcMain.handle('enable-mcp-server', async (event, enabled, port) => {
 ipcMain.handle('get-mcp-server-status', async () => {
   return {
     enabled: mcpServerState.enabled,
-    isRunning: mcpServerState.isRunning
+    isRunning: mcpServerState.isRunning,
+    port: mcpServerState.port
   };
 });
 
 // MCP server functions
 async function startMcpServer(port = 3001) {
   if (mcpServerState.isRunning) {
-    console.log('[MCP Server] Already running');
-    return;
+    console.log('[MCP Server] Already running on port', mcpServerState.port);
+    // If running on a different port, stop and restart
+    if (mcpServerState.port !== port) {
+      console.log(`[MCP Server] Port change detected (${mcpServerState.port} -> ${port}), restarting...`);
+      await stopMcpServer();
+    } else {
+      return;
+    }
   }
 
   try {
@@ -515,11 +541,13 @@ async function startMcpServer(port = 3001) {
     mcpServerState.server.on('error', (error) => {
       console.error('[MCP Server] Error:', error);
       mcpServerState.isRunning = false;
+      mcpServerState.enabled = false;
     });
 
     mcpServerState.server.on('exit', (code, signal) => {
       console.log(`[MCP Server] Exited with code ${code}, signal ${signal}`);
       mcpServerState.isRunning = false;
+      mcpServerState.enabled = false;
     });
 
     mcpServerState.server.stdout.on('data', (data) => {
@@ -530,13 +558,13 @@ async function startMcpServer(port = 3001) {
       const message = data.toString().trim();
       if (message.includes('listening on port') || message.includes(`Server running on port ${port}`)) {
         mcpServerState.isRunning = true;
+        mcpServerState.enabled = true;
         console.log(`[MCP Server] Started successfully on port ${port}`);
       } else {
         console.error(`[MCP Server] ${message}`);
       }
     });
 
-    mcpServerState.enabled = true;
     console.log(`[MCP Server] Starting on port ${port}...`);
     
     // Wait a moment for the server to start

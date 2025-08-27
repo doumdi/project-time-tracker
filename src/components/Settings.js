@@ -194,13 +194,21 @@ const Settings = () => {
       const mcpPort = storedMcpPort ? parseInt(storedMcpPort) : 3001;
       setMcpServerPort(mcpPort);
       
-      // Initialize MCP server if enabled
-      if (mcpEnabled && window.electronAPI) {
+      // Check MCP server status and sync with actual state
+      if (window.electronAPI) {
         try {
-          await window.electronAPI.enableMcpServer(true, mcpPort);
-          console.log('MCP server initialized on port', mcpPort);
+          const status = await window.electronAPI.getMcpServerStatus();
+          // Sync the UI state with actual server state
+          setMcpServerEnabled(status.enabled && status.isRunning);
+          console.log('[Settings] MCP server status synced:', status);
+          
+          // Also sync the port if server is running
+          if (status.isRunning && status.port) {
+            setMcpServerPort(status.port);
+            console.log('[Settings] MCP server port synced to:', status.port);
+          }
         } catch (error) {
-          console.error('Failed to initialize MCP server:', error);
+          console.error('[Settings] Failed to get MCP server status:', error);
         }
       }
       
