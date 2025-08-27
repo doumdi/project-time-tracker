@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, isSameMonth, isToday } from 'date-fns';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const CalendarView = ({ timeEntries, projects }) => {
@@ -57,7 +57,9 @@ const CalendarView = ({ timeEntries, projects }) => {
         date: day,
         entries: dayEntries,
         projectGroups: Object.values(entriesByProject),
-        totalDuration: dayEntries.reduce((total, entry) => total + (entry.duration || 0), 0)
+        totalDuration: dayEntries.reduce((total, entry) => total + (entry.duration || 0), 0),
+        isCurrentMonth: viewMode === 'month' ? isSameMonth(day, currentDate) : true,
+        isToday: isToday(day)
       };
     });
 
@@ -105,11 +107,6 @@ const CalendarView = ({ timeEntries, projects }) => {
 
   const renderMonthView = () => {
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const weeks = [];
-    
-    for (let i = 0; i < calendarData.length; i += 7) {
-      weeks.push(calendarData.slice(i, i + 7));
-    }
 
     return (
       <div className="calendar">
@@ -119,25 +116,43 @@ const CalendarView = ({ timeEntries, projects }) => {
               {day}
             </div>
           ))}
-          {calendarData.map((dayData, index) => (
-            <div key={index} className="calendar-day">
-              <div className="calendar-day-number">
-                {format(dayData.date, 'd')}
-              </div>
-              <div className="calendar-entries">
-                {dayData.projectGroups.map((group, idx) => (
-                  <div 
-                    key={idx}
-                    className="calendar-entry"
-                    style={{ borderLeftColor: group.project?.color }}
-                    title={`${group.project?.name}: ${formatDuration(group.totalDuration)}`}
-                  >
-                    {group.project?.name.substring(0, 10)}{group.project?.name.length > 10 ? '...' : ''}: {formatDuration(group.totalDuration)}
+          {calendarData.map((dayData, index) => {
+            const dayClasses = [
+              'calendar-day',
+              !dayData.isCurrentMonth && 'other-month',
+              dayData.isToday && 'today'
+            ].filter(Boolean).join(' ');
+
+            return (
+              <div key={index} className={dayClasses}>
+                <div className="calendar-day-number">
+                  {format(dayData.date, 'd')}
+                </div>
+                <div className="calendar-entries">
+                  {dayData.projectGroups.slice(0, 3).map((group, idx) => (
+                    <div 
+                      key={idx}
+                      className="calendar-entry"
+                      style={{ borderLeftColor: group.project?.color }}
+                      title={`${group.project?.name}: ${formatDuration(group.totalDuration)}`}
+                    >
+                      {group.project?.name.substring(0, 12)}{group.project?.name.length > 12 ? '...' : ''}: {formatDuration(group.totalDuration)}
+                    </div>
+                  ))}
+                  {dayData.projectGroups.length > 3 && (
+                    <div className="calendar-entry" style={{ borderLeftColor: '#ccc', fontSize: '0.7rem', fontStyle: 'italic' }}>
+                      +{dayData.projectGroups.length - 3} more...
+                    </div>
+                  )}
+                </div>
+                {dayData.totalDuration > 0 && (
+                  <div className="calendar-day-total">
+                    {formatDuration(dayData.totalDuration)}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -145,53 +160,60 @@ const CalendarView = ({ timeEntries, projects }) => {
 
   const renderWeekView = () => {
     return (
-      <div className="calendar">
+      <div className="calendar calendar-week-view">
         <div className="calendar-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
           {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
             <div key={day} className="calendar-day-header">
               {day}
             </div>
           ))}
-          {calendarData.map((dayData, index) => (
-            <div key={index} className="calendar-day" style={{ minHeight: '200px' }}>
-              <div className="calendar-day-number">
-                {format(dayData.date, 'MMM d')}
-              </div>
-              <div className="calendar-entries">
-                {dayData.entries.map((entry, idx) => (
-                  <div 
-                    key={idx}
-                    className="calendar-entry"
-                    style={{ 
-                      borderLeftColor: entry.project_color,
-                      marginBottom: '0.25rem',
-                      padding: '0.25rem'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
-                      {format(parseISO(entry.start_time), 'HH:mm')} - {entry.project_name}
+          {calendarData.map((dayData, index) => {
+            const dayClasses = [
+              'calendar-day',
+              dayData.isToday && 'today'
+            ].filter(Boolean).join(' ');
+
+            return (
+              <div key={index} className={dayClasses}>
+                <div className="calendar-day-number">
+                  {format(dayData.date, 'MMM d')}
+                </div>
+                <div className="calendar-entries">
+                  {dayData.entries.map((entry, idx) => (
+                    <div 
+                      key={idx}
+                      className="calendar-entry"
+                      style={{ 
+                        borderLeftColor: entry.project_color,
+                        marginBottom: '0.25rem',
+                        padding: '0.25rem'
+                      }}
+                    >
+                      <div style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
+                        {format(parseISO(entry.start_time), 'HH:mm')} - {entry.project_name}
+                      </div>
+                      <div style={{ fontSize: '0.6rem' }}>
+                        {formatDuration(entry.duration)}
+                        {entry.description && ` • ${entry.description.substring(0, 20)}${entry.description.length > 20 ? '...' : ''}`}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.6rem' }}>
-                      {formatDuration(entry.duration)}
-                      {entry.description && ` • ${entry.description.substring(0, 20)}${entry.description.length > 20 ? '...' : ''}`}
+                  ))}
+                  {dayData.totalDuration > 0 && (
+                    <div style={{ 
+                      fontSize: '0.7rem', 
+                      fontWeight: 'bold', 
+                      marginTop: '0.5rem',
+                      padding: '0.25rem',
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: '3px'
+                    }}>
+                      Total: {formatDuration(dayData.totalDuration)}
                     </div>
-                  </div>
-                ))}
-                {dayData.totalDuration > 0 && (
-                  <div style={{ 
-                    fontSize: '0.7rem', 
-                    fontWeight: 'bold', 
-                    marginTop: '0.5rem',
-                    padding: '0.25rem',
-                    background: 'rgba(102, 126, 234, 0.1)',
-                    borderRadius: '3px'
-                  }}>
-                    Total: {formatDuration(dayData.totalDuration)}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
