@@ -103,10 +103,10 @@ Enhanced form with modern design:
 
 The following screenshot files should be created to document the feature:
 
-1. `docs/images/Tasks.png` - Main tasks list with various task states
-2. `docs/images/TaskCreateForm.png` - Enhanced task creation form
-3. `docs/images/TaskActiveDisplay.png` - Active task timer display
-4. `docs/images/TaskProgressBars.png` - Close-up of progress visualization
+1. `docs/images/screenshot-tasks.png` - Main tasks list with various task states
+2. `docs/images/screenshot-task-create-form.png` - Enhanced task creation form
+3. `docs/images/screenshot-task-active-display.png` - Active task timer display
+4. `docs/images/screenshot-task-progress-bars.png` - Close-up of progress visualization
 
 ## UI Color Scheme
 
