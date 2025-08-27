@@ -121,7 +121,9 @@
     "taskStarted": "Tâche démarrée ! Le suivi du temps est maintenant actif.",
     "taskStopped": "Tâche arrêtée ! L'entrée de temps a été sauvegardée.",
     "onlyOneActiveTask": "Une seule tâche peut être active à la fois",
-    "selectProjectForTimeEntry": "Veuillez sélectionner un projet pour cette tâche pour activer le suivi du temps"
+    "selectProjectForTimeEntry": "Veuillez sélectionner un projet pour cette tâche pour activer le suivi du temps",
+    "noProject": "Aucun projet",
+    "taskNameRequired": "Veuillez entrer un nom de tâche"
   },
   "calendar": {
     "title": "Calendrier",

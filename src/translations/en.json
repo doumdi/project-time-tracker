@@ -121,7 +121,9 @@
     "taskStarted": "Task started! Time tracking is now active.",
     "taskStopped": "Task stopped! Time entry has been saved.",
     "onlyOneActiveTask": "Only one task can be active at a time",
-    "selectProjectForTimeEntry": "Please select a project for this task to enable time tracking"
+    "selectProjectForTimeEntry": "Please select a project for this task to enable time tracking",
+    "noProject": "No project",
+    "taskNameRequired": "Please enter a task name"
   },
   "calendar": {
     "title": "Calendar",

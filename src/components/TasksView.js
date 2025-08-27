@@ -54,7 +54,7 @@ const TasksView = ({ projects, onRefresh }) => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      alert('Please enter a task name');
+      alert(t('tasks.taskNameRequired'));
       return;
     }
 
@@ -265,25 +265,27 @@ const TasksView = ({ projects, onRefresh }) => {
         {activeTask && (
           <div style={{ 
             marginBottom: '2rem', 
-            padding: '1rem', 
-            background: '#e8f5e8', 
-            borderRadius: '6px',
-            border: '1px solid #4CAF50'
+            padding: '1.5rem', 
+            background: 'linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%)', 
+            borderRadius: '12px',
+            border: '2px solid #4CAF50',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#2e7d2e' }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: '#2e7d2e', fontSize: '1.3rem' }}>
                   ⏱️ {activeTask.name}
                 </h3>
-                <p style={{ margin: '0', color: '#666' }}>
+                <p style={{ margin: '0', color: '#666', fontSize: '1rem' }}>
                   {activeTask.project_name} • {formatElapsedTime(elapsedTime)}
                 </p>
               </div>
               <button 
-                className="btn btn-danger"
+                className="btn btn-danger btn-large"
                 onClick={handleStopTask}
+                style={{ minWidth: '120px' }}
               >
-                {t('tasks.stopTask')}
+                ⏹️ {t('tasks.stopTask')}
               </button>
             </div>
           </div>
@@ -293,17 +295,21 @@ const TasksView = ({ projects, onRefresh }) => {
         {isCreateFormOpen && (
           <div style={{ 
             marginBottom: '2rem', 
-            padding: '1rem', 
-            background: '#f8f9fa', 
-            borderRadius: '6px',
-            border: '1px solid #ddd'
+            padding: '2rem', 
+            background: 'white', 
+            borderRadius: '12px',
+            border: '1px solid #e1e5e9',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
           }}>
-            <h3 style={{ margin: '0 0 1rem 0' }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.3rem', color: '#333' }}>
               {editingTask ? t('tasks.editTask') : t('tasks.createTask')}
             </h3>
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="form-label">{t('tasks.taskName')}</label>
+              {/* Task Name - Full Width */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ fontSize: '1rem', fontWeight: '600' }}>
+                  {t('tasks.taskName')} <span style={{ color: '#dc3545' }}>*</span>
+                </label>
                 <input
                   type="text"
                   className="form-control"
@@ -311,22 +317,46 @@ const TasksView = ({ projects, onRefresh }) => {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={t('tasks.taskNamePlaceholder')}
                   required
+                  style={{ 
+                    fontSize: '1.1rem', 
+                    padding: '1rem',
+                    minHeight: '50px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '8px'
+                  }}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              {/* Two Column Layout for Due Date and Allocated Time */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '1.5rem', 
+                marginBottom: '1.5rem' 
+              }}>
                 <div>
-                  <label className="form-label">{t('tasks.dueDate')}</label>
+                  <label className="form-label" style={{ fontSize: '1rem', fontWeight: '600' }}>
+                    {t('tasks.dueDate')}
+                  </label>
                   <input
                     type="date"
                     className="form-control"
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    style={{ 
+                      fontSize: '1rem', 
+                      padding: '1rem',
+                      minHeight: '50px',
+                      border: '2px solid #e1e5e9',
+                      borderRadius: '8px'
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="form-label">{t('tasks.allocatedTime')}</label>
+                  <label className="form-label" style={{ fontSize: '1rem', fontWeight: '600' }}>
+                    {t('tasks.allocatedTime')}
+                  </label>
                   <input
                     type="number"
                     className="form-control"
@@ -334,16 +364,33 @@ const TasksView = ({ projects, onRefresh }) => {
                     onChange={(e) => setFormData({ ...formData, allocated_time: e.target.value })}
                     placeholder={t('tasks.allocatedTimePlaceholder')}
                     min="0"
+                    style={{ 
+                      fontSize: '1rem', 
+                      padding: '1rem',
+                      minHeight: '50px',
+                      border: '2px solid #e1e5e9',
+                      borderRadius: '8px'
+                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="form-label">{t('tasks.project')}</label>
+              {/* Project Selection - Full Width */}
+              <div style={{ marginBottom: '2rem' }}>
+                <label className="form-label" style={{ fontSize: '1rem', fontWeight: '600' }}>
+                  {t('tasks.project')}
+                </label>
                 <select
                   className="form-control"
                   value={formData.project_id}
                   onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+                  style={{ 
+                    fontSize: '1rem', 
+                    padding: '1rem',
+                    minHeight: '50px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '8px'
+                  }}
                 >
                   <option value="">{t('tasks.chooseProject')}</option>
                   {projects.map(project => (
@@ -354,12 +401,21 @@ const TasksView = ({ projects, onRefresh }) => {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary">
-                  {editingTask ? t('common.save') : t('common.create')}
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary btn-large"
+                  style={{ minWidth: '120px' }}
+                >
+                  ✅ {editingTask ? t('common.save') : t('common.create')}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                  {t('common.cancel')}
+                <button 
+                  type="button" 
+                  className="btn btn-secondary btn-large" 
+                  onClick={resetForm}
+                  style={{ minWidth: '120px' }}
+                >
+                  ❌ {t('common.cancel')}
                 </button>
               </div>
             </form>
@@ -368,16 +424,34 @@ const TasksView = ({ projects, onRefresh }) => {
 
         {/* Tasks List */}
         {tasks.length > 0 ? (
-          <div className="table-container">
-            <table className="data-table">
+          <div style={{ 
+            background: 'white',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e1e5e9'
+          }}>
+            <table className="data-table" style={{ margin: 0 }}>
               <thead>
-                <tr>
-                  <th>{t('tasks.taskName')}</th>
-                  <th>{t('tasks.project')}</th>
-                  <th>{t('tasks.dueDate')}</th>
-                  <th>{t('tasks.allocatedTime')}</th>
-                  <th>{t('common.status')}</th>
-                  <th>{t('common.actions')}</th>
+                <tr style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('tasks.taskName')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('tasks.project')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('tasks.dueDate')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('tasks.allocatedTime')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('common.status')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('common.actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -385,60 +459,106 @@ const TasksView = ({ projects, onRefresh }) => {
                   const status = getTaskStatus(task);
                   return (
                     <tr key={task.id} style={{ 
-                      background: task.is_active ? '#f0f8f0' : 'transparent' 
+                      background: task.is_active ? 'linear-gradient(135deg, #f0f8f0 0%, #e8f5e8 100%)' : 'transparent',
+                      borderLeft: task.is_active ? '4px solid #4CAF50' : '4px solid transparent'
                     }}>
-                      <td>
-                        <strong>{task.name}</strong>
-                        {task.is_active && <span style={{ color: '#4CAF50', marginLeft: '0.5rem' }}>●</span>}
+                      <td style={{ padding: '1.2rem 1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <strong style={{ fontSize: '1rem' }}>{task.name}</strong>
+                          {task.is_active && (
+                            <span style={{ 
+                              background: '#4CAF50',
+                              color: 'white',
+                              fontSize: '0.7rem',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {t('tasks.active')}
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td>
+                      <td style={{ padding: '1.2rem 1rem' }}>
                         {task.project_name ? (
-                          <span style={{ 
-                            color: task.project_color,
-                            fontWeight: 'bold'
-                          }}>
-                            {task.project_name}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div 
+                              style={{ 
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                background: task.project_color || '#666'
+                              }}
+                            />
+                            <span style={{ 
+                              fontWeight: '500',
+                              fontSize: '0.95rem'
+                            }}>
+                              {task.project_name}
+                            </span>
+                          </div>
                         ) : (
-                          <span style={{ color: '#999' }}>No project</span>
+                          <span style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                            {t('tasks.noProject')}
+                          </span>
                         )}
                       </td>
-                      <td>
+                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
                         {task.due_date ? format(parseISO(task.due_date), 'MMM dd, yyyy') : '-'}
                       </td>
-                      <td>
+                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
                         {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
                       </td>
-                      <td>
+                      <td style={{ padding: '1.2rem 1rem' }}>
                         <span style={{ 
                           color: getStatusColor(status),
-                          fontWeight: 'bold'
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem',
+                          background: status === 'overdue' ? 'rgba(244, 67, 54, 0.1)' : 
+                                     status === 'due-soon' ? 'rgba(255, 152, 0, 0.1)' :
+                                     status === 'active' ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '12px',
+                          border: status !== 'normal' && status !== 'no-due-date' ? 
+                                 `1px solid ${getStatusColor(status)}40` : 'none'
                         }}>
                           {getStatusLabel(status)}
                         </span>
                       </td>
-                      <td>
+                      <td style={{ padding: '1.2rem 1rem' }}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           {!task.is_active && task.project_id && (
                             <button 
                               className="btn btn-small btn-success"
                               onClick={() => handleStartTask(task)}
                               disabled={activeTask !== null}
+                              style={{ 
+                                fontSize: '0.8rem',
+                                padding: '0.4rem 0.8rem'
+                              }}
                             >
-                              {t('tasks.startTask')}
+                              ▶️ {t('tasks.startTask')}
                             </button>
                           )}
                           <button 
                             className="btn btn-small btn-secondary"
                             onClick={() => handleEdit(task)}
+                            style={{ 
+                              fontSize: '0.8rem',
+                              padding: '0.4rem 0.8rem'
+                            }}
                           >
-                            {t('common.edit')}
+                            ✏️ {t('common.edit')}
                           </button>
                           <button 
                             className="btn btn-small btn-danger"
                             onClick={() => handleDelete(task)}
+                            style={{ 
+                              fontSize: '0.8rem',
+                              padding: '0.4rem 0.8rem'
+                            }}
                           >
-                            {t('common.delete')}
+                            🗑️ {t('common.delete')}
                           </button>
                         </div>
                       </td>
@@ -449,9 +569,28 @@ const TasksView = ({ projects, onRefresh }) => {
             </table>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            <p>{t('tasks.noTasks')}</p>
-            <p>{t('tasks.createFirstTask')}</p>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '4rem 2rem', 
+            background: 'white',
+            borderRadius: '12px',
+            border: '2px dashed #e1e5e9',
+            color: '#666'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📋</div>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.3rem', color: '#333' }}>
+              {t('tasks.noTasks')}
+            </h3>
+            <p style={{ margin: '0', fontSize: '1.1rem', lineHeight: '1.5' }}>
+              {t('tasks.createFirstTask')}
+            </p>
+            <button 
+              className="btn btn-primary btn-large"
+              onClick={() => setIsCreateFormOpen(true)}
+              style={{ marginTop: '1.5rem', minWidth: '150px' }}
+            >
+              ✅ {t('tasks.createTask')}
+            </button>
           </div>
         )}
       </div>
