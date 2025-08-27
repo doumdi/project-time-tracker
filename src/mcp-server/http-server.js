@@ -33,11 +33,13 @@ class TimeTrackerHttpMCPServer {
   }
 
   setupExpress() {
-    // CORS middleware for local development
+    // CORS middleware for MCP clients (similar to examples)
     this.app.use((req, res, next) => {
-      res.header('Access-Control-Allow-Origin', 'http://localhost:*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      // Allow all origins for local development - this is standard for MCP servers
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, Mcp-Session-Id');
+      res.header('Access-Control-Expose-Headers', 'Mcp-Session-Id');
       res.header('Cache-Control', 'no-cache');
       
       if (req.method === 'OPTIONS') {
@@ -54,24 +56,7 @@ class TimeTrackerHttpMCPServer {
       console.log('Received GET request to /mcp (establishing SSE stream)');
       try {
         // Create a new SSE transport for the client
-        // Allow both plain host and host:port for local development (client POSTs include Host header with port)
-        const allowedHosts = [
-          'localhost',
-          '127.0.0.1',
-          `localhost:${this.port}`,
-          `127.0.0.1:${this.port}`,
-        ];
-
-        const allowedOrigins = [
-          'http://localhost:3000',
-          'http://127.0.0.1:3000',
-        ];
-
-        const transport = new SSEServerTransport('/messages', res, {
-          allowedHosts,
-          allowedOrigins,
-          enableDnsRebindingProtection: true,
-        });
+        const transport = new SSEServerTransport('/messages', res);
         
         // Store the transport by session ID
         const sessionId = transport.sessionId;

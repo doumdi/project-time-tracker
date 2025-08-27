@@ -168,27 +168,33 @@ The MCP server enables:
 
 ### MCP Server Won't Start
 1. Check that the MCP SDK dependency is installed
-2. Ensure no other process is using the same resources
+2. Ensure no other process is using the same port
 3. Check the application logs for error messages
 4. Try disabling and re-enabling the server
 
-### Connection Issues
+### Connection Issues (VSCode/MCP Clients)
 1. Verify the AI system supports MCP protocol
-2. Check that the server is running (Settings page)
-3. Restart the application if needed
+2. Check that the server is running (Settings page shows status)
+3. For VSCode integration:
+   - Ensure you're using the correct MCP endpoint: `http://localhost:PORT/mcp`
+   - Check that no firewall is blocking the connection
+   - Verify the port number matches your settings
+4. The server accepts connections from any origin for local development
+5. Restart the application if needed
 
 ### Data Access Issues
 1. Ensure the database is accessible
 2. Check for any database errors in logs
 3. Verify data integrity
 
-## Technical Details
+### Technical Details
 
 ### Server Implementation
 - Built using the `@modelcontextprotocol/sdk` package
-- Uses stdio transport for communication
+- Uses HTTP with Server-Sent Events (SSE) transport for communication
 - Runs as a child process of the main application
 - Directly accesses the SQLite database
+- Accepts connections from any origin for local development (secure for localhost-only server)
 
 ### Performance Considerations
 - All operations are performed directly on the local database
