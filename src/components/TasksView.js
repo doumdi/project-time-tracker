@@ -447,6 +447,9 @@ const TasksView = ({ projects, onRefresh }) => {
                     {t('tasks.allocatedTime')}
                   </th>
                   <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
+                    {t('tasks.cumulatedTime')}
+                  </th>
+                  <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
                     {t('common.status')}
                   </th>
                   <th style={{ fontSize: '0.9rem', fontWeight: '600', padding: '1.2rem 1rem' }}>
@@ -508,6 +511,31 @@ const TasksView = ({ projects, onRefresh }) => {
                       </td>
                       <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
                         {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
+                      </td>
+                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: '500' }}>
+                            {task.cumulated_time > 0 ? `${Math.floor(task.cumulated_time / 60)}h ${task.cumulated_time % 60}m` : '0 min'}
+                          </span>
+                          {task.allocated_time > 0 && (
+                            <div style={{
+                              width: '60px',
+                              height: '8px',
+                              background: '#e1e5e9',
+                              borderRadius: '4px',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                width: `${Math.min(100, (task.cumulated_time / task.allocated_time) * 100)}%`,
+                                height: '100%',
+                                background: task.cumulated_time > task.allocated_time ? '#f44336' : 
+                                          task.cumulated_time > task.allocated_time * 0.8 ? '#ff9800' : '#4CAF50',
+                                borderRadius: '4px'
+                              }} />
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '1.2rem 1rem' }}>
                         <span style={{ 

@@ -130,6 +130,13 @@ const TimeTracker = ({ projects, onRefresh }) => {
 
       await window.electronAPI.addTimeEntry(timeEntry);
       
+      // Deactivate any active task when stopping timer
+      try {
+        await window.electronAPI.setActiveTask(null);
+      } catch (taskError) {
+        console.warn('Error deactivating task:', taskError);
+      }
+      
       // Reset state
       setIsTracking(false);
       setStartTime(null);
@@ -148,6 +155,13 @@ const TimeTracker = ({ projects, onRefresh }) => {
       setIsTracking(false);
       // Clear the saved timer from localStorage even on error
       localStorage.removeItem('activeTimer');
+      
+      // Still try to deactivate task even on error
+      try {
+        await window.electronAPI.setActiveTask(null);
+      } catch (taskError) {
+        console.warn('Error deactivating task after timer error:', taskError);
+      }
     }
   };
 

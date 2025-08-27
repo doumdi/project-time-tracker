@@ -100,6 +100,8 @@
     "chooseProject": "Choisir un projet (optionnel)",
     "allocatedTime": "Temps Alloué (minutes)",
     "allocatedTimePlaceholder": "Temps estimé nécessaire",
+    "cumulatedTime": "Temps Passé",
+    "timeVsAllocated": "Progrès Temporel",
     "noTasks": "Aucune Tâche",
     "createFirstTask": "Créez votre première tâche pour vous organiser !",
     "active": "Active",

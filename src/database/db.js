@@ -706,9 +706,17 @@ function getOfficePresenceSummary(filters = {}) {
 function getTasks(filters = {}) {
   return new Promise((resolve, reject) => {
     let sql = `
-      SELECT t.*, p.name as project_name, p.color as project_color
+      SELECT t.*, 
+             p.name as project_name, 
+             p.color as project_color,
+             COALESCE(SUM(CASE 
+               WHEN te.description LIKE '%' || t.name || '%' 
+               THEN te.duration 
+               ELSE 0 
+             END), 0) as cumulated_time
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN time_entries te ON t.project_id = te.project_id
     `;
     
     const conditions = [];
@@ -728,6 +736,7 @@ function getTasks(filters = {}) {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
     
+    sql += ' GROUP BY t.id, p.name, p.color';
     sql += ' ORDER BY t.is_active DESC, t.due_date ASC, t.created_at DESC';
     
     if (filters.limit) {
