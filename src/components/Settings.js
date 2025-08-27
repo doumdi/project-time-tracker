@@ -20,6 +20,8 @@ const Settings = () => {
   const [officePresenceEnabled, setOfficePresenceEnabled] = useState(false);
   const [presenceSaveInterval, setPresenceSaveInterval] = useState(15); // Default 15 minutes
   const [taskDisplayCount, setTaskDisplayCount] = useState(5); // Default 5 tasks
+  const [mcpServerEnabled, setMcpServerEnabled] = useState(false);
+  const [mcpServerPort, setMcpServerPort] = useState(3001);
 
   // Load version information
   useEffect(() => {
@@ -119,6 +121,46 @@ const Settings = () => {
     alert(t('settings.settingsSaved'));
   };
 
+  const handleMcpServerToggle = async (e) => {
+    const enabled = e.target.checked;
+    setMcpServerEnabled(enabled);
+    
+    // Store in localStorage
+    localStorage.setItem('mcpServerEnabled', enabled.toString());
+    
+    // Enable/disable MCP server via IPC
+    try {
+      await window.electronAPI.enableMcpServer(enabled, mcpServerPort);
+      alert(t('settings.settingsSaved'));
+    } catch (error) {
+      console.error('Failed to toggle MCP server:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+      // Revert the toggle state
+      setMcpServerEnabled(!enabled);
+      localStorage.setItem('mcpServerEnabled', (!enabled).toString());
+    }
+  };
+
+  const handleMcpServerPortChange = async (e) => {
+    const port = parseInt(e.target.value);
+    if (isNaN(port) || port < 1024 || port > 65535) return;
+    
+    setMcpServerPort(port);
+    localStorage.setItem('mcpServerPort', port.toString());
+    
+    // If MCP server is currently enabled, restart it with new port
+    if (mcpServerEnabled && window.electronAPI) {
+      try {
+        await window.electronAPI.enableMcpServer(false); // Stop first
+        await window.electronAPI.enableMcpServer(true, port); // Start with new port
+        alert(t('settings.settingsSaved'));
+      } catch (error) {
+        console.error('Failed to update MCP server port:', error);
+        alert(t('settings.errorSaving') || 'Error saving settings');
+      }
+    }
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -140,6 +182,34 @@ const Settings = () => {
       const storedTaskCount = localStorage.getItem('taskDisplayCount');
       if (storedTaskCount) {
         setTaskDisplayCount(parseInt(storedTaskCount) || 5);
+      }
+      
+      // Load MCP server setting
+      const storedMcpServer = localStorage.getItem('mcpServerEnabled');
+      const mcpEnabled = storedMcpServer === 'true';
+      setMcpServerEnabled(mcpEnabled);
+      
+      // Load MCP server port
+      const storedMcpPort = localStorage.getItem('mcpServerPort');
+      const mcpPort = storedMcpPort ? parseInt(storedMcpPort) : 3001;
+      setMcpServerPort(mcpPort);
+      
+      // Check MCP server status and sync with actual state
+      if (window.electronAPI) {
+        try {
+          const status = await window.electronAPI.getMcpServerStatus();
+          // Sync the UI state with actual server state
+          setMcpServerEnabled(status.enabled && status.isRunning);
+          console.log('[Settings] MCP server status synced:', status);
+          
+          // Also sync the port if server is running
+          if (status.isRunning && status.port) {
+            setMcpServerPort(status.port);
+            console.log('[Settings] MCP server port synced to:', status.port);
+          }
+        } catch (error) {
+          console.error('[Settings] Failed to get MCP server status:', error);
+        }
       }
       
       // Initialize presence monitoring if enabled
@@ -281,6 +351,63 @@ const Settings = () => {
               >
                 {t('settings.configureBleDevices')}
               </button>
+            </div>
+
+            {/* MCP Server Settings */}
+            <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#f0f7ff', borderRadius: '8px', border: '1px solid #d6e9f9' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#333' }}>
+                {t('settings.mcpServer') || 'MCP Server'}
+              </h3>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={mcpServerEnabled}
+                    onChange={handleMcpServerToggle}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  {t('settings.enableMcpServer') || 'Enable MCP Server'}
+                </label>
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.mcpServerDescription') || 'Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server listens on localhost HTTP port when enabled.'}
+                </small>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">
+                  {t('settings.mcpServerPort') || 'MCP Server Port'}
+                </label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={mcpServerPort}
+                  onChange={handleMcpServerPortChange}
+                  min="1024"
+                  max="65535"
+                  step="1"
+                  style={{ maxWidth: '120px' }}
+                />
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.mcpServerPortDescription') || 'Port number for the MCP server (1024-65535). Default: 3001'}
+                </small>
+              </div>
+
+              {mcpServerEnabled && (
+                <div style={{ 
+                  padding: '1rem', 
+                  background: '#fff3cd', 
+                  border: '1px solid #ffeaa7', 
+                  borderRadius: '6px',
+                  fontSize: '0.9rem'
+                }}>
+                  <strong>⚠️ Security Notice:</strong> The MCP server exposes read/write access to all your data via HTTP on localhost:{mcpServerPort}. 
+                  Only enable this feature if you understand the security implications and trust the AI systems 
+                  that will connect to it.
+                  <br /><br />
+                  <strong>Server URL:</strong> http://localhost:{mcpServerPort}/mcp
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px' }}>

@@ -43,12 +43,12 @@ app.whenReady().then(() => {
       try {
         // Read the saved preference directly from the renderer's localStorage.
         // webContents.send does not return a value; use executeJavaScript to query localStorage.
-        const stored = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
-        const enabled = stored === 'true';
+        const storedPresence = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
+        const presenceEnabled = storedPresence === 'true';
 
-        console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', stored);
+        console.log('[MAIN] officePresenceEnabled (from renderer localStorage):', storedPresence);
 
-        if (enabled) {
+        if (presenceEnabled) {
           // Start presence monitoring in the main process. The function will
           // no-op if noble is not available or if there are no monitored devices.
           try {
@@ -58,8 +58,27 @@ app.whenReady().then(() => {
             console.error('[MAIN] Failed to start presence monitoring on launch:', err);
           }
         }
+
+        // Check MCP server settings and start automatically if enabled
+        const storedMcpServer = await mainWindow.webContents.executeJavaScript("localStorage.getItem('mcpServerEnabled');");
+        const mcpEnabled = storedMcpServer === 'true';
+
+        console.log('[MAIN] mcpServerEnabled (from renderer localStorage):', storedMcpServer);
+
+        if (mcpEnabled) {
+          // Get the stored port or use default
+          const storedMcpPort = await mainWindow.webContents.executeJavaScript("localStorage.getItem('mcpServerPort');");
+          const mcpPort = storedMcpPort ? parseInt(storedMcpPort) : 3001;
+          
+          try {
+            await startMcpServer(mcpPort);
+            console.log('[MAIN] MCP server started automatically on app launch on port', mcpPort);
+          } catch (err) {
+            console.error('[MAIN] Failed to start MCP server on launch:', err);
+          }
+        }
       } catch (error) {
-        console.error('Error checking presence monitoring settings from renderer:', error);
+        console.error('Error checking settings from renderer:', error);
       }
     });
   }
@@ -148,6 +167,13 @@ app.on('before-quit', async (event) => {
     console.error('Error saving active sessions before quit:', error);
   }
 
+  // Stop MCP server before closing database
+  try {
+    await stopMcpServer();
+  } catch (err) {
+    console.warn('Error stopping MCP server during shutdown:', err);
+  }
+
   // Finally, close the database after all async activity and timers have been stopped
   try {
     if (database && typeof database.closeDatabase === 'function') {
@@ -166,6 +192,9 @@ app.on('activate', () => {
 
 // Database operations will be handled here
 const database = require('./database/db');
+
+// Import MCP server functionality
+const { TimeTrackerHttpMCPServer } = require('./mcp-server/http-server');
 
 // Import BLE functionality
 let noble;
@@ -194,6 +223,15 @@ let bleState = {
   globalPresenceStartTime: null, // Track when global presence started
   presenceSaveTimer: null, // Timer for periodic presence saves
   presenceSaveInterval: 15 * 60 * 1000 // Default 15 minutes in milliseconds
+};
+
+// MCP server state
+let mcpServerState = {
+  server: null,
+  httpServer: null,
+  isRunning: false,
+  enabled: false,
+  port: 3001
 };
 
 // IPC handlers for database operations
@@ -459,6 +497,211 @@ ipcMain.handle('set-presence-save-interval', async (event, intervalMinutes) => {
 ipcMain.handle('get-presence-save-interval', async () => {
   return Math.floor(bleState.presenceSaveInterval / (60 * 1000)); // Return in minutes
 });
+
+// MCP server IPC handlers
+ipcMain.handle('enable-mcp-server', async (event, enabled, port) => {
+  try {
+    if (enabled) {
+      await startMcpServer(port || 3001);
+    } else {
+      await stopMcpServer();
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to toggle MCP server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-mcp-server-status', async () => {
+  return {
+    enabled: mcpServerState.enabled,
+    isRunning: mcpServerState.isRunning,
+    port: mcpServerState.port
+  };
+});
+
+// Create IPC interface for MCP server to use
+const mcpIpcInterface = {
+  handle: async (channel, ...args) => {
+    // Simulate IPC call by directly calling the existing IPC handlers
+    try {
+      let result;
+      let shouldEmitChange = false;
+      
+      switch (channel) {
+        case 'get-projects':
+          result = await database.getProjects();
+          break;
+        case 'add-project':
+          result = await database.addProject(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'update-project':
+          result = await database.updateProject(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'delete-project':
+          result = await database.deleteProject(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'get-tasks':
+          result = await database.getTasks(args[0]);
+          break;
+        case 'add-task':
+          result = await database.addTask(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'update-task':
+          result = await database.updateTask(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'delete-task':
+          result = await database.deleteTask(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'set-active-task':
+          result = await database.setActiveTask(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'get-active-task':
+          result = await database.getActiveTask();
+          break;
+        case 'get-time-entries':
+          result = await database.getTimeEntries(args[0]);
+          break;
+        case 'add-time-entry':
+          result = await database.addTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'update-time-entry':
+          result = await database.updateTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'delete-time-entry':
+          result = await database.deleteTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'get-office-presence':
+          result = await database.getOfficePresence(args[0]);
+          break;
+        case 'add-office-presence':
+          result = await database.addOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'update-office-presence':
+          result = await database.updateOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'delete-office-presence':
+          result = await database.deleteOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'get-ble-devices':
+          result = await database.getBleDevices();
+          break;
+        case 'add-ble-device':
+          result = await database.addBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'update-ble-device':
+          result = await database.updateBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'delete-ble-device':
+          result = await database.deleteBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
+        case 'get-time-summary':
+          result = await database.getTimeSummary(args[0]);
+          break;
+        case 'get-office-presence-summary':
+          result = await database.getOfficePresenceSummary(args[0]);
+          break;
+        default:
+          throw new Error(`Unknown IPC channel: ${channel}`);
+      }
+      
+      // Emit database change event if this was a modifying operation
+      if (shouldEmitChange && mainWindow && !mainWindow.isDestroyed()) {
+        console.log(`[MCP IPC] Emitting database-changed event for ${channel}`);
+        mainWindow.webContents.send('database-changed', {
+          operation: channel,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error(`[MCP IPC] Error handling ${channel}:`, error);
+      throw error;
+    }
+  }
+};
+
+// MCP server functions
+async function startMcpServer(port = 3001) {
+  if (mcpServerState.isRunning) {
+    console.log('[MCP Server] Already running on port', mcpServerState.port);
+    // If running on a different port, stop and restart
+    if (mcpServerState.port !== port) {
+      console.log(`[MCP Server] Port change detected (${mcpServerState.port} -> ${port}), restarting...`);
+      await stopMcpServer();
+    } else {
+      return;
+    }
+  }
+
+  try {
+    // Store the port
+    mcpServerState.port = port;
+    
+    // Create the MCP server instance with IPC interface
+    mcpServerState.server = new TimeTrackerHttpMCPServer(mcpIpcInterface, port);
+    
+    // Start the HTTP server
+    mcpServerState.httpServer = await mcpServerState.server.run();
+    
+    mcpServerState.isRunning = true;
+    mcpServerState.enabled = true;
+    
+    console.log(`[MCP Server] Started successfully on port ${port}`);
+    console.log(`[MCP Server] MCP endpoint: http://localhost:${port}/mcp`);
+    console.log(`[MCP Server] Health check: http://localhost:${port}/health`);
+    
+  } catch (error) {
+    console.error('[MCP Server] Failed to start:', error);
+    mcpServerState.enabled = false;
+    mcpServerState.isRunning = false;
+    mcpServerState.server = null;
+    mcpServerState.httpServer = null;
+    throw error;
+  }
+}
+
+async function stopMcpServer() {
+  if (!mcpServerState.server) {
+    console.log('[MCP Server] Not running');
+    return;
+  }
+
+  try {
+    // Close the MCP HTTP server
+    if (mcpServerState.server && typeof mcpServerState.server.close === 'function') {
+      await mcpServerState.server.close();
+    }
+    
+    mcpServerState.server = null;
+    mcpServerState.httpServer = null;
+    mcpServerState.enabled = false;
+    mcpServerState.isRunning = false;
+    
+    console.log('[MCP Server] Stopped');
+  } catch (error) {
+    console.error('[MCP Server] Failed to stop:', error);
+    throw error;
+  }
+}
 
 // BLE scanning functions
 function startBleScan() {

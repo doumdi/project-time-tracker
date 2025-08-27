@@ -25,6 +25,23 @@ const AppContent = () => {
     loadData();
   }, [refreshTrigger]);
 
+  // Listen for database changes from MCP server or other external operations
+  useEffect(() => {
+    const handleDatabaseChange = (event, data) => {
+      console.log('[UI] Database changed by external operation:', data);
+      // Trigger a refresh to update the UI with latest data
+      handleRefresh();
+    };
+
+    // Set up event listener for database changes
+    window.electronAPI.onDatabaseChanged(handleDatabaseChange);
+
+    // Cleanup on unmount
+    return () => {
+      window.electronAPI.removeAllListeners('database-changed');
+    };
+  }, []);
+
   const loadData = async () => {
     try {
       const [projectList, entriesList] = await Promise.all([
