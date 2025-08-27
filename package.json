@@ -1,6 +1,6 @@
 {
   "name": "project-time-tracker",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Simple time tracking per project",
   "main": "src/main.js",
   "homepage": "./",
@@ -16,7 +16,10 @@
     "dev": "concurrently \"npm start\" \"wait-on http://localhost:8080 && npm run electron-dev\"",
     "populate-dev-data": "node scripts/populate-dev-data.js",
     "populate-dev-data-clear": "node scripts/populate-dev-data.js --clear",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "test": "node tests/comprehensive-timer-tests.js",
+    "test:timer": "node tests/timer-tests.js",
+    "test:sync": "node tests/timer-sync-tests.js"
   },
   "build": {
     "appId": "com.doumdi.project-time-tracker",

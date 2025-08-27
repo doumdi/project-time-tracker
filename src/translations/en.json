@@ -36,7 +36,10 @@
     "timeEntrySaved": "Time entry saved",
     "quickEntrySaved": "Quick entry saved",
     "errorSaving": "Error saving time entry",
-    "errorSavingQuick": "Error saving quick entry"
+    "errorSavingQuick": "Error saving quick entry",
+    "stopTaskTimerConfirm": "A task timer is currently active. Stop it and start a new timer?",
+    "taskTimerActive": "Task Timer Active",
+    "trackingTaskTime": "Tracking time for a specific task"
   },
   "projects": {
     "title": "Projects",

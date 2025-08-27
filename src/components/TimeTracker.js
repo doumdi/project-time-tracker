@@ -11,6 +11,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
   const [quickEntryMode, setQuickEntryMode] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [tasksToShow, setTasksToShow] = useState(5); // Default to 5 tasks
+  const [activeTaskId, setActiveTaskId] = useState(null); // Track active task ID
   const [quickEntry, setQuickEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: '',
@@ -36,6 +37,10 @@ const TimeTracker = ({ projects, onRefresh }) => {
           setIsTracking(true);
           setStartTime(timerData.startTime);
           setElapsedTime(Date.now() - timerData.startTime);
+          // Preserve taskId if it exists
+          if (timerData.taskId) {
+            setActiveTaskId(timerData.taskId);
+          }
         }
       } catch (error) {
         console.error('Error loading saved timer:', error);
@@ -67,11 +72,17 @@ const TimeTracker = ({ projects, onRefresh }) => {
         selectedProject,
         description
       };
+      
+      // Preserve taskId if this is a task timer
+      if (activeTaskId) {
+        timerData.taskId = activeTaskId;
+      }
+      
       localStorage.setItem('activeTimer', JSON.stringify(timerData));
     } else {
       localStorage.removeItem('activeTimer');
     }
-  }, [isTracking, startTime, selectedProject, description]);
+  }, [isTracking, startTime, selectedProject, description, activeTaskId]);
 
   useEffect(() => {
     let interval;
@@ -102,7 +113,15 @@ const TimeTracker = ({ projects, onRefresh }) => {
       // Stop tracking
       handleStopTimer();
     } else {
-      // Start tracking
+      // Check if there's an active task timer before starting a new timer
+      if (activeTaskId) {
+        if (!window.confirm(t('timer.stopTaskTimerConfirm') || 'A task timer is currently active. Stop it and start a new timer?')) {
+          return;
+        }
+      }
+      
+      // Start tracking - clear any previous task association
+      setActiveTaskId(null);
       setStartTime(Date.now());
       setElapsedTime(0);
       setIsTracking(true);
@@ -142,6 +161,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
       setStartTime(null);
       setElapsedTime(0);
       setDescription('');
+      setActiveTaskId(null); // Clear task association
       
       // Clear the saved timer from localStorage
       localStorage.removeItem('activeTimer');
@@ -153,6 +173,7 @@ const TimeTracker = ({ projects, onRefresh }) => {
       console.error('Error saving time entry:', error);
       alert(`${t('timer.errorSaving')}: ` + error.message);
       setIsTracking(false);
+      setActiveTaskId(null); // Clear task association on error
       // Clear the saved timer from localStorage even on error
       localStorage.removeItem('activeTimer');
       
@@ -311,6 +332,28 @@ const TimeTracker = ({ projects, onRefresh }) => {
             {!quickEntryMode ? (
               /* Live Timer Mode */
               <>
+                {/* Task Timer Indicator */}
+                {activeTaskId && isTracking && (
+                  <div style={{ 
+                    backgroundColor: '#e3f2fd', 
+                    border: '1px solid #2196f3', 
+                    borderRadius: '0.5rem', 
+                    padding: '1rem', 
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>🎯</span>
+                    <div>
+                      <strong>{t('timer.taskTimerActive')}</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                        {t('timer.trackingTaskTime')}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="timer-display">
                   {formatElapsedTime(elapsedTime)}
                 </div>

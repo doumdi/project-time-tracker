@@ -36,7 +36,10 @@
     "timeEntrySaved": "Entrée de temps enregistrée",
     "quickEntrySaved": "Saisie rapide enregistrée",
     "errorSaving": "Erreur lors de l'enregistrement de l'entrée",
-    "errorSavingQuick": "Erreur lors de l'enregistrement de la saisie rapide"
+    "errorSavingQuick": "Erreur lors de l'enregistrement de la saisie rapide",
+    "stopTaskTimerConfirm": "Un chrono de tâche est actuellement actif. L'arrêter et démarrer un nouveau chrono ?",
+    "taskTimerActive": "Chrono de Tâche Actif",
+    "trackingTaskTime": "Suivi du temps pour une tâche spécifique"
   },
   "projects": {
     "title": "Projets",
