@@ -9,22 +9,56 @@ This document provides instructions for testing the Project Time Tracker MCP ser
 1. Start Project Time Tracker
 2. Navigate to Settings (⚙️ Settings)
 3. Scroll down to the "MCP Server" section (blue background)
-4. Check the "Enable MCP Server" checkbox
-5. You should see a security warning appear
-6. The server should start automatically
+4. Optionally configure the port (default: 3001)
+5. Check the "Enable MCP Server" checkbox
+6. You should see a security warning appear with the server URL
+7. The server should start automatically
 
 ### 2. Verify Server Status
 
 Check the application logs (if running in development mode) for messages like:
 ```
-[MCP Server] Starting...
-[MCP Server] Project Time Tracker MCP server running on stdio
-[MCP Server] Started successfully
+[MCP Server] Starting on port 3001...
+[MCP Server] Project Time Tracker MCP server listening on port 3001
+[MCP Server] Server running on port 3001
+[MCP Server] MCP endpoint: http://localhost:3001/mcp
+[MCP Server] Health check: http://localhost:3001/health
+[MCP Server] Started successfully on port 3001
 ```
 
-### 3. Test with MCP Client
+### 3. Test HTTP Endpoints
 
-Since the server uses stdio transport, you would need an MCP-compatible client to test it. The server exposes 24 tools:
+The server now provides HTTP endpoints that you can test directly:
+
+#### Health Check Endpoint
+```bash
+curl http://localhost:3001/health
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "server": "project-time-tracker-mcp",
+  "version": "1.0.0",
+  "port": 3001,
+  "endpoints": {
+    "mcp": "/mcp",
+    "messages": "/messages"
+  }
+}
+```
+
+#### MCP Endpoint (SSE Stream)
+```bash
+curl -H "Accept: text/event-stream" -H "Cache-Control: no-cache" http://localhost:3001/mcp
+```
+
+This will establish an SSE connection and receive initialization messages.
+
+### 4. Test with MCP Client
+
+The server uses HTTP with Server-Sent Events (SSE) transport and exposes 24 tools:
 
 #### Project Operations
 - `get_projects`

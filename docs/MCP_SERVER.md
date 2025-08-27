@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Project Time Tracker includes an optional Model Context Protocol (MCP) server that exposes all application functionalities to AI systems. This allows AI assistants to interact with your time tracking data programmatically.
+The Project Time Tracker includes an optional Model Context Protocol (MCP) server that exposes all application functionalities to AI systems. This allows AI assistants to interact with your time tracking data programmatically via HTTP endpoints.
 
 ## What is MCP?
 
@@ -17,14 +17,14 @@ The Model Context Protocol (MCP) is a standard protocol that allows AI systems t
 
 ⚠️ **IMPORTANT SECURITY NOTICE** ⚠️
 
-The MCP server provides **full read and write access** to all your time tracking data. Only enable this feature if you:
+The MCP server provides **full read and write access** to all your time tracking data via HTTP endpoints. Only enable this feature if you:
 
 1. Understand the security implications
 2. Trust the AI systems that will connect to it
 3. Are comfortable with AI assistants having access to your data
 4. Are running the application in a secure environment
 
-The server runs locally on your machine and does not expose data over the internet by default.
+The server runs locally on your machine (localhost only) and does not expose data over the internet by default.
 
 ## Enabling the MCP Server
 
@@ -32,9 +32,27 @@ The server runs locally on your machine and does not expose data over the intern
 2. Navigate to Settings (⚙️ Settings)
 3. Scroll down to the "MCP Server" section
 4. Check the "Enable MCP Server" checkbox
-5. The server will start automatically
+5. Optionally configure the port (default: 3001)
+6. The server will start automatically
 
-When enabled, the server runs on your local machine using stdio transport.
+When enabled, the server runs on your local machine using HTTP with Server-Sent Events (SSE) transport.
+
+**Server Endpoints:**
+- Main MCP endpoint: `http://localhost:PORT/mcp`
+- Health check: `http://localhost:PORT/health`
+- Messages endpoint: `http://localhost:PORT/messages`
+
+## Configuration
+
+### Port Settings
+
+You can configure the port number for the MCP server:
+
+1. In Settings, find the "MCP Server Port" field
+2. Enter a port number between 1024-65535 (default: 3001)
+3. If the server is running, it will restart automatically with the new port
+
+**Note:** Make sure the chosen port is not already in use by another application.
 
 ## Available Operations
 
