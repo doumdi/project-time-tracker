@@ -11,28 +11,31 @@ Author(s) :
 ## Screenshots
 
 ### Time Tracker
-![Time Tracker Interface](docs/images/TimeTracker.png)
+![Time Tracker Interface](docs/images/screenshot-time-tracker.png)
 
 ### Charts
-![Charts and Analytics View](docs/images/Charts.png)
+![Charts and Analytics View](docs/images/screenshot-charts.png)
 
 ### Parameters
-![Settings and Configuration](docs/images/Parameters.png)
+![Settings and Configuration](docs/images/screenshot-parameters.png)
 
 ### Time Entries
-![Time Entries List View](docs/images/TimeEntries.png)
+![Time Entries List View](docs/images/screenshot-time-entries.png)
 
 ### Projects
-![Project Management Interface](docs/images/Projects.png)
+![Project Management Interface](docs/images/screenshot-projects.png)
 
 ### Tasks
-![Task Management with Cumulated Time Tracking](docs/images/Tasks.png)
+![Task Management with Cumulated Time Tracking](docs/images/screenshot-tasks.png)
+
+### Reports
+![Reports and Analytics View](docs/images/screenshot-reports.png)
 
 ### Office Presence
-![Office Presence Real-time Tracking](docs/images/OfficePresence.png)
+![Office Presence Real-time Tracking](docs/images/screenshot-office-presence.png)
 
 ### Configurable Presence Settings
-![Configurable Presence Settings](docs/images/BLESettings.png)
+![Configurable Presence Settings](docs/images/screenshot-ble-settings.png)
 
 ## Features
 
