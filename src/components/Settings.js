@@ -20,6 +20,7 @@ const Settings = () => {
   const [officePresenceEnabled, setOfficePresenceEnabled] = useState(false);
   const [presenceSaveInterval, setPresenceSaveInterval] = useState(15); // Default 15 minutes
   const [taskDisplayCount, setTaskDisplayCount] = useState(5); // Default 5 tasks
+  const [mcpServerEnabled, setMcpServerEnabled] = useState(false);
 
   // Load version information
   useEffect(() => {
@@ -119,6 +120,26 @@ const Settings = () => {
     alert(t('settings.settingsSaved'));
   };
 
+  const handleMcpServerToggle = async (e) => {
+    const enabled = e.target.checked;
+    setMcpServerEnabled(enabled);
+    
+    // Store in localStorage
+    localStorage.setItem('mcpServerEnabled', enabled.toString());
+    
+    // Enable/disable MCP server via IPC
+    try {
+      await window.electronAPI.enableMcpServer(enabled);
+      alert(t('settings.settingsSaved'));
+    } catch (error) {
+      console.error('Failed to toggle MCP server:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+      // Revert the toggle state
+      setMcpServerEnabled(!enabled);
+      localStorage.setItem('mcpServerEnabled', (!enabled).toString());
+    }
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -140,6 +161,21 @@ const Settings = () => {
       const storedTaskCount = localStorage.getItem('taskDisplayCount');
       if (storedTaskCount) {
         setTaskDisplayCount(parseInt(storedTaskCount) || 5);
+      }
+      
+      // Load MCP server setting
+      const storedMcpServer = localStorage.getItem('mcpServerEnabled');
+      const mcpEnabled = storedMcpServer === 'true';
+      setMcpServerEnabled(mcpEnabled);
+      
+      // Initialize MCP server if enabled
+      if (mcpEnabled && window.electronAPI) {
+        try {
+          await window.electronAPI.enableMcpServer(true);
+          console.log('MCP server initialized');
+        } catch (error) {
+          console.error('Failed to initialize MCP server:', error);
+        }
       }
       
       // Initialize presence monitoring if enabled
@@ -281,6 +317,42 @@ const Settings = () => {
               >
                 {t('settings.configureBleDevices')}
               </button>
+            </div>
+
+            {/* MCP Server Settings */}
+            <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#f0f7ff', borderRadius: '8px', border: '1px solid #d6e9f9' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#333' }}>
+                {t('settings.mcpServer') || 'MCP Server'}
+              </h3>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={mcpServerEnabled}
+                    onChange={handleMcpServerToggle}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  {t('settings.enableMcpServer') || 'Enable MCP Server'}
+                </label>
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.mcpServerDescription') || 'Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server runs on localhost when enabled.'}
+                </small>
+              </div>
+
+              {mcpServerEnabled && (
+                <div style={{ 
+                  padding: '1rem', 
+                  background: '#fff3cd', 
+                  border: '1px solid #ffeaa7', 
+                  borderRadius: '6px',
+                  fontSize: '0.9rem'
+                }}>
+                  <strong>⚠️ Security Notice:</strong> The MCP server exposes read/write access to all your data. 
+                  Only enable this feature if you understand the security implications and trust the AI systems 
+                  that will connect to it.
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px' }}>

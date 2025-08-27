@@ -186,7 +186,10 @@
     "configureBleDevices": "Configure BLE Devices",
     "taskDisplayCount": "Task Display Count",
     "taskDisplayCountDescription": "Number of recent tasks to show in Time Tracker (1-20)",
-    "errorSaving": "Error saving settings"
+    "errorSaving": "Error saving settings",
+    "mcpServer": "MCP Server",
+    "enableMcpServer": "Enable MCP Server",
+    "mcpServerDescription": "Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server runs on localhost when enabled."
   },
   "common": {
     "save": "Save",

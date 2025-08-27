@@ -186,7 +186,10 @@
     "configureBleDevices": "Configurer les Appareils BLE",
     "taskDisplayCount": "Nombre de Tâches Affichées",
     "taskDisplayCountDescription": "Nombre de tâches récentes à afficher dans le Suivi de Temps (1-20)",
-    "errorSaving": "Erreur lors de la sauvegarde des paramètres"
+    "errorSaving": "Erreur lors de la sauvegarde des paramètres",
+    "mcpServer": "Serveur MCP",
+    "enableMcpServer": "Activer le Serveur MCP",
+    "mcpServerDescription": "Exposer toutes les fonctionnalités de l'application via le serveur Model Context Protocol (MCP) pour les systèmes IA. Le serveur fonctionne sur localhost lorsqu'il est activé."
   },
   "common": {
     "save": "Enregistrer",

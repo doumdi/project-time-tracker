@@ -59,5 +59,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onBleScanStopped: (callback) => ipcRenderer.on('ble-scan-stopped', callback),
   onPresenceStatusUpdated: (callback) => ipcRenderer.on('presence-status-updated', callback),
   onPresenceDataUpdated: (callback) => ipcRenderer.on('presence-data-updated', callback),
-  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+  
+  // MCP server operations
+  enableMcpServer: (enabled) => ipcRenderer.invoke('enable-mcp-server', enabled),
+  getMcpServerStatus: () => ipcRenderer.invoke('get-mcp-server-status')
 });

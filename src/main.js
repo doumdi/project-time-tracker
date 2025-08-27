@@ -196,6 +196,13 @@ let bleState = {
   presenceSaveInterval: 15 * 60 * 1000 // Default 15 minutes in milliseconds
 };
 
+// MCP server state
+let mcpServerState = {
+  server: null,
+  isRunning: false,
+  enabled: false
+};
+
 // IPC handlers for database operations
 ipcMain.handle('get-projects', async () => {
   return await database.getProjects();
@@ -459,6 +466,119 @@ ipcMain.handle('set-presence-save-interval', async (event, intervalMinutes) => {
 ipcMain.handle('get-presence-save-interval', async () => {
   return Math.floor(bleState.presenceSaveInterval / (60 * 1000)); // Return in minutes
 });
+
+// MCP server IPC handlers
+ipcMain.handle('enable-mcp-server', async (event, enabled) => {
+  try {
+    if (enabled) {
+      await startMcpServer();
+    } else {
+      await stopMcpServer();
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to toggle MCP server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-mcp-server-status', async () => {
+  return {
+    enabled: mcpServerState.enabled,
+    isRunning: mcpServerState.isRunning
+  };
+});
+
+// MCP server functions
+async function startMcpServer() {
+  if (mcpServerState.isRunning) {
+    console.log('[MCP Server] Already running');
+    return;
+  }
+
+  try {
+    const { spawn } = require('child_process');
+    const path = require('path');
+    
+    const serverPath = path.join(__dirname, 'mcp-server', 'index.js');
+    
+    mcpServerState.server = spawn('node', [serverPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: __dirname
+    });
+
+    mcpServerState.server.on('error', (error) => {
+      console.error('[MCP Server] Error:', error);
+      mcpServerState.isRunning = false;
+    });
+
+    mcpServerState.server.on('exit', (code, signal) => {
+      console.log(`[MCP Server] Exited with code ${code}, signal ${signal}`);
+      mcpServerState.isRunning = false;
+    });
+
+    mcpServerState.server.stdout.on('data', (data) => {
+      console.log(`[MCP Server] ${data.toString().trim()}`);
+    });
+
+    mcpServerState.server.stderr.on('data', (data) => {
+      const message = data.toString().trim();
+      if (message.includes('running on stdio')) {
+        mcpServerState.isRunning = true;
+        console.log('[MCP Server] Started successfully');
+      } else {
+        console.error(`[MCP Server] ${message}`);
+      }
+    });
+
+    mcpServerState.enabled = true;
+    console.log('[MCP Server] Starting...');
+    
+    // Wait a moment for the server to start
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+  } catch (error) {
+    console.error('[MCP Server] Failed to start:', error);
+    mcpServerState.enabled = false;
+    mcpServerState.isRunning = false;
+    throw error;
+  }
+}
+
+async function stopMcpServer() {
+  if (!mcpServerState.server) {
+    console.log('[MCP Server] Not running');
+    return;
+  }
+
+  try {
+    mcpServerState.server.kill('SIGTERM');
+    
+    // Wait for graceful shutdown
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        if (mcpServerState.server) {
+          mcpServerState.server.kill('SIGKILL');
+        }
+        resolve();
+      }, 5000);
+      
+      mcpServerState.server.on('exit', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+    });
+
+    mcpServerState.server = null;
+    mcpServerState.enabled = false;
+    mcpServerState.isRunning = false;
+    
+    console.log('[MCP Server] Stopped');
+  } catch (error) {
+    console.error('[MCP Server] Failed to stop:', error);
+    throw error;
+  }
+}
 
 // BLE scanning functions
 function startBleScan() {
