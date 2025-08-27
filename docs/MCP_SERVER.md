@@ -35,6 +35,16 @@ The server runs locally on your machine (localhost only) and does not expose dat
 5. Optionally configure the port (default: 3001)
 6. The server will start automatically
 
+## Architecture
+
+The MCP server runs **in-process** with the main Electron application, sharing the same database connection and using Inter-Process Communication (IPC) for all database operations. This ensures:
+
+- **Single Process**: No separate server processes are spawned
+- **Shared Database**: UI and MCP server use the same SQLite database connection
+- **Consistent Data**: All operations go through the same IPC layer
+- **Better Performance**: Reduced overhead from process communication
+- **Unified Resource Management**: Proper cleanup and shutdown handling
+
 When enabled, the server runs on your local machine using HTTP with Server-Sent Events (SSE) transport.
 
 **Server Endpoints:**
