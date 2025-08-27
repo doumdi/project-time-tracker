@@ -54,10 +54,23 @@ class TimeTrackerHttpMCPServer {
       console.log('Received GET request to /mcp (establishing SSE stream)');
       try {
         // Create a new SSE transport for the client
+        // Allow both plain host and host:port for local development (client POSTs include Host header with port)
+        const allowedHosts = [
+          'localhost',
+          '127.0.0.1',
+          `localhost:${this.port}`,
+          `127.0.0.1:${this.port}`,
+        ];
+
+        const allowedOrigins = [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+        ];
+
         const transport = new SSEServerTransport('/messages', res, {
-          allowedHosts: ['localhost', '127.0.0.1'],
-          allowedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-          enableDnsRebindingProtection: true
+          allowedHosts,
+          allowedOrigins,
+          enableDnsRebindingProtection: true,
         });
         
         // Store the transport by session ID
