@@ -60,6 +60,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onPresenceStatusUpdated: (callback) => ipcRenderer.on('presence-status-updated', callback),
   onPresenceDataUpdated: (callback) => ipcRenderer.on('presence-data-updated', callback),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+
+  // Event listeners for database changes (triggered by MCP server or other external operations)
+  onDatabaseChanged: (callback) => ipcRenderer.on('database-changed', callback),
   
   // MCP server operations
   enableMcpServer: (enabled, port) => ipcRenderer.invoke('enable-mcp-server', enabled, port),

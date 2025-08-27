@@ -526,58 +526,112 @@ const mcpIpcInterface = {
   handle: async (channel, ...args) => {
     // Simulate IPC call by directly calling the existing IPC handlers
     try {
+      let result;
+      let shouldEmitChange = false;
+      
       switch (channel) {
         case 'get-projects':
-          return await database.getProjects();
+          result = await database.getProjects();
+          break;
         case 'add-project':
-          return await database.addProject(args[0]);
+          result = await database.addProject(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'update-project':
-          return await database.updateProject(args[0]);
+          result = await database.updateProject(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'delete-project':
-          return await database.deleteProject(args[0]);
+          result = await database.deleteProject(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'get-tasks':
-          return await database.getTasks(args[0]);
+          result = await database.getTasks(args[0]);
+          break;
         case 'add-task':
-          return await database.addTask(args[0]);
+          result = await database.addTask(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'update-task':
-          return await database.updateTask(args[0]);
+          result = await database.updateTask(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'delete-task':
-          return await database.deleteTask(args[0]);
+          result = await database.deleteTask(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'set-active-task':
-          return await database.setActiveTask(args[0]);
+          result = await database.setActiveTask(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'get-active-task':
-          return await database.getActiveTask();
+          result = await database.getActiveTask();
+          break;
         case 'get-time-entries':
-          return await database.getTimeEntries(args[0]);
+          result = await database.getTimeEntries(args[0]);
+          break;
         case 'add-time-entry':
-          return await database.addTimeEntry(args[0]);
+          result = await database.addTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'update-time-entry':
-          return await database.updateTimeEntry(args[0]);
+          result = await database.updateTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'delete-time-entry':
-          return await database.deleteTimeEntry(args[0]);
+          result = await database.deleteTimeEntry(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'get-office-presence':
-          return await database.getOfficePresence(args[0]);
+          result = await database.getOfficePresence(args[0]);
+          break;
         case 'add-office-presence':
-          return await database.addOfficePresence(args[0]);
+          result = await database.addOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'update-office-presence':
-          return await database.updateOfficePresence(args[0]);
+          result = await database.updateOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'delete-office-presence':
-          return await database.deleteOfficePresence(args[0]);
+          result = await database.deleteOfficePresence(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'get-ble-devices':
-          return await database.getBleDevices();
+          result = await database.getBleDevices();
+          break;
         case 'add-ble-device':
-          return await database.addBleDevice(args[0]);
+          result = await database.addBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'update-ble-device':
-          return await database.updateBleDevice(args[0]);
+          result = await database.updateBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'delete-ble-device':
-          return await database.deleteBleDevice(args[0]);
+          result = await database.deleteBleDevice(args[0]);
+          shouldEmitChange = true;
+          break;
         case 'get-time-summary':
-          return await database.getTimeSummary(args[0]);
+          result = await database.getTimeSummary(args[0]);
+          break;
         case 'get-office-presence-summary':
-          return await database.getOfficePresenceSummary(args[0]);
+          result = await database.getOfficePresenceSummary(args[0]);
+          break;
         default:
           throw new Error(`Unknown IPC channel: ${channel}`);
       }
+      
+      // Emit database change event if this was a modifying operation
+      if (shouldEmitChange && mainWindow && !mainWindow.isDestroyed()) {
+        console.log(`[MCP IPC] Emitting database-changed event for ${channel}`);
+        mainWindow.webContents.send('database-changed', {
+          operation: channel,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return result;
     } catch (error) {
       console.error(`[MCP IPC] Error handling ${channel}:`, error);
       throw error;
