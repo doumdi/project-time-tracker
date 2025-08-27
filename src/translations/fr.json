@@ -4,6 +4,7 @@
     "tabs": {
       "timer": "⏱️ Suivi de Temps",
       "projects": "📁 Projets", 
+      "tasks": "✅ Tâches",
       "entries": "📝 Entrées de Temps",
       "calendar": "📅 Calendrier",
       "charts": "📊 Graphiques",
@@ -35,7 +36,10 @@
     "timeEntrySaved": "Entrée de temps enregistrée",
     "quickEntrySaved": "Saisie rapide enregistrée",
     "errorSaving": "Erreur lors de l'enregistrement de l'entrée",
-    "errorSavingQuick": "Erreur lors de l'enregistrement de la saisie rapide"
+    "errorSavingQuick": "Erreur lors de l'enregistrement de la saisie rapide",
+    "stopTaskTimerConfirm": "Un chrono de tâche est actuellement actif. L'arrêter et démarrer un nouveau chrono ?",
+    "taskTimerActive": "Chrono de Tâche Actif",
+    "trackingTaskTime": "Suivi du temps pour une tâche spécifique"
   },
   "projects": {
     "title": "Projets",
@@ -87,6 +91,44 @@
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette entrée de temps ?",
     "entryDeleted": "Entrée de temps supprimée avec succès !",
     "errorDeleting": "Erreur lors de la suppression de l'entrée"
+  },
+  "tasks": {
+    "title": "Tâches",
+    "createTask": "Créer une Tâche",
+    "editTask": "Modifier la Tâche",
+    "taskName": "Nom de la Tâche *",
+    "taskNamePlaceholder": "Que faut-il faire ?",
+    "dueDate": "Date d'Échéance",
+    "project": "Projet",
+    "chooseProject": "Choisir un projet (optionnel)",
+    "allocatedTime": "Temps Alloué (minutes)",
+    "allocatedTimePlaceholder": "Temps estimé nécessaire",
+    "cumulatedTime": "Temps Passé",
+    "timeVsAllocated": "Progrès Temporel",
+    "noTasks": "Aucune Tâche",
+    "createFirstTask": "Créez votre première tâche pour vous organiser !",
+    "active": "Active",
+    "inactive": "Inactive",
+    "startTask": "Démarrer la Tâche",
+    "stopTask": "Arrêter la Tâche",
+    "dueSoon": "Échéance Proche",
+    "overdue": "En Retard",
+    "completed": "Terminé",
+    "taskCreated": "Tâche créée avec succès !",
+    "taskUpdated": "Tâche mise à jour avec succès !",
+    "taskDeleted": "Tâche supprimée avec succès !",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette tâche ?",
+    "errorCreating": "Erreur lors de la création de la tâche",
+    "errorUpdating": "Erreur lors de la mise à jour de la tâche",
+    "errorDeleting": "Erreur lors de la suppression de la tâche",
+    "errorStarting": "Erreur lors du démarrage de la tâche",
+    "errorStopping": "Erreur lors de l'arrêt de la tâche",
+    "taskStarted": "Tâche démarrée ! Le suivi du temps est maintenant actif.",
+    "taskStopped": "Tâche arrêtée ! L'entrée de temps a été sauvegardée.",
+    "onlyOneActiveTask": "Une seule tâche peut être active à la fois",
+    "selectProjectForTimeEntry": "Veuillez sélectionner un projet pour cette tâche pour activer le suivi du temps",
+    "noProject": "Aucun projet",
+    "taskNameRequired": "Veuillez entrer un nom de tâche"
   },
   "calendar": {
     "title": "Calendrier",
@@ -142,11 +184,14 @@
     "presenceSaveIntervalDescription": "À quelle fréquence sauvegarder les sessions de présence dans la base de données (1-480 minutes)",
     "configureDevices": "Configurer les Appareils BLE",
     "configureBleDevices": "Configurer les Appareils BLE",
+    "taskDisplayCount": "Nombre de Tâches Affichées",
+    "taskDisplayCountDescription": "Nombre de tâches récentes à afficher dans le Suivi de Temps (1-20)",
     "errorSaving": "Erreur lors de la sauvegarde des paramètres"
   },
   "common": {
     "save": "Enregistrer",
     "cancel": "Annuler",
+    "create": "Créer",
     "edit": "Modifier",
     "delete": "Supprimer",
     "confirm": "Confirmer",
@@ -159,7 +204,9 @@
     "hours": "h",
     "days": "jours",
     "back": "Retour",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "status": "Statut",
+    "actions": "Actions"
   },
   "presence": {
     "title": "Présence Bureau",

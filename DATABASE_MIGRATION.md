@@ -78,11 +78,24 @@ When you need to modify the database schema:
     */
    function applyV5Migration(db) {
      return new Promise((resolve, reject) => {
-       console.log('Migration v5: Adding project status tracking');
+       console.log('Migration v5: Adding tasks table');
        
        const migrationSql = `
-         ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'active';
-         CREATE INDEX idx_projects_status ON projects(status);
+         CREATE TABLE IF NOT EXISTS tasks (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           name TEXT NOT NULL,
+           due_date DATE,
+           project_id INTEGER,
+           allocated_time INTEGER DEFAULT 0,
+           is_active BOOLEAN DEFAULT 0,
+           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+           FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+         );
+         
+         CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
+         CREATE INDEX IF NOT EXISTS idx_tasks_is_active ON tasks(is_active);
+         CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
        `;
        
        db.exec(migrationSql, (err) => {
@@ -176,6 +189,7 @@ useEffect(() => {
   - `v2.js`: Add budget column to projects
   - `v3.js`: Add start_date and end_date columns to projects
   - `v4.js`: Add BLE devices and office presence tables
+  - `v5.js`: Add tasks table with project association and time tracking
 - `src/main.js`: IPC handlers for version functions
 - `src/preload.js`: Frontend API exposure
 - `src/components/Settings.js`: Version display in UI

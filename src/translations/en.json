@@ -4,6 +4,7 @@
     "tabs": {
       "timer": "⏱️ Time Tracker",
       "projects": "📁 Projects", 
+      "tasks": "✅ Tasks",
       "entries": "📝 Time Entries",
       "calendar": "📅 Calendar",
       "charts": "📊 Charts",
@@ -35,7 +36,10 @@
     "timeEntrySaved": "Time entry saved",
     "quickEntrySaved": "Quick entry saved",
     "errorSaving": "Error saving time entry",
-    "errorSavingQuick": "Error saving quick entry"
+    "errorSavingQuick": "Error saving quick entry",
+    "stopTaskTimerConfirm": "A task timer is currently active. Stop it and start a new timer?",
+    "taskTimerActive": "Task Timer Active",
+    "trackingTaskTime": "Tracking time for a specific task"
   },
   "projects": {
     "title": "Projects",
@@ -87,6 +91,44 @@
     "confirmDelete": "Are you sure you want to delete this time entry?",
     "entryDeleted": "Time entry deleted successfully!",
     "errorDeleting": "Error deleting time entry"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "createTask": "Create Task",
+    "editTask": "Edit Task",
+    "taskName": "Task Name *",
+    "taskNamePlaceholder": "What needs to be done?",
+    "dueDate": "Due Date",
+    "project": "Project",
+    "chooseProject": "Choose a project (optional)",
+    "allocatedTime": "Allocated Time (minutes)",
+    "allocatedTimePlaceholder": "Estimated time needed",
+    "cumulatedTime": "Time Spent",
+    "timeVsAllocated": "Time Progress",
+    "noTasks": "No Tasks",
+    "createFirstTask": "Create your first task to get organized!",
+    "active": "Active",
+    "inactive": "Inactive",
+    "startTask": "Start Task",
+    "stopTask": "Stop Task",
+    "dueSoon": "Due Soon",
+    "overdue": "Overdue",
+    "completed": "Completed",
+    "taskCreated": "Task created successfully!",
+    "taskUpdated": "Task updated successfully!",
+    "taskDeleted": "Task deleted successfully!",
+    "confirmDelete": "Are you sure you want to delete this task?",
+    "errorCreating": "Error creating task",
+    "errorUpdating": "Error updating task",
+    "errorDeleting": "Error deleting task",
+    "errorStarting": "Error starting task",
+    "errorStopping": "Error stopping task",
+    "taskStarted": "Task started! Time tracking is now active.",
+    "taskStopped": "Task stopped! Time entry has been saved.",
+    "onlyOneActiveTask": "Only one task can be active at a time",
+    "selectProjectForTimeEntry": "Please select a project for this task to enable time tracking",
+    "noProject": "No project",
+    "taskNameRequired": "Please enter a task name"
   },
   "calendar": {
     "title": "Calendar",
@@ -142,11 +184,14 @@
     "presenceSaveIntervalDescription": "How often to save presence sessions to database (1-480 minutes)",
     "configureDevices": "Configure BLE Devices",
     "configureBleDevices": "Configure BLE Devices",
+    "taskDisplayCount": "Task Display Count",
+    "taskDisplayCountDescription": "Number of recent tasks to show in Time Tracker (1-20)",
     "errorSaving": "Error saving settings"
   },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
+    "create": "Create",
     "edit": "Edit",
     "delete": "Delete",
     "confirm": "Confirm",
@@ -159,7 +204,9 @@
     "hours": "h",
     "days": "days",
     "back": "Back",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "status": "Status",
+    "actions": "Actions"
   },
   "presence": {
     "title": "Office Presence",

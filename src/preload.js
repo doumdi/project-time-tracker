@@ -35,6 +35,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteOfficePresence: (id) => ipcRenderer.invoke('delete-office-presence', id),
   getOfficePresenceSummary: (filters) => ipcRenderer.invoke('get-office-presence-summary', filters),
   
+  // Task operations
+  getTasks: (filters) => ipcRenderer.invoke('get-tasks', filters),
+  addTask: (task) => ipcRenderer.invoke('add-task', task),
+  updateTask: (task) => ipcRenderer.invoke('update-task', task),
+  deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
+  setActiveTask: (taskId) => ipcRenderer.invoke('set-active-task', taskId),
+  getActiveTask: () => ipcRenderer.invoke('get-active-task'),
+  
   // BLE scanning operations
   startBleScan: () => ipcRenderer.invoke('start-ble-scan'),
   stopBleScan: () => ipcRenderer.invoke('stop-ble-scan'),

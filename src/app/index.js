@@ -4,6 +4,7 @@ import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
 import TimeTracker from '../components/TimeTracker';
 import ProjectManager from '../components/ProjectManager';
+import TasksView from '../components/TasksView';
 import TimeEntryList from '../components/TimeEntryList';
 import CalendarView from '../components/CalendarView';
 import ChartsView from '../components/ChartsView';
@@ -44,6 +45,7 @@ const AppContent = () => {
   const tabs = [
     { id: 'timer', label: t('app.tabs.timer'), component: TimeTracker },
     { id: 'projects', label: t('app.tabs.projects'), component: ProjectManager },
+    { id: 'tasks', label: t('app.tabs.tasks'), component: TasksView },
     { id: 'entries', label: t('app.tabs.entries'), component: TimeEntryList },
     { id: 'calendar', label: t('app.tabs.calendar'), component: CalendarView },
     { id: 'charts', label: t('app.tabs.charts'), component: ChartsView },

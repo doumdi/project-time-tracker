@@ -25,6 +25,9 @@ Author(s) :
 ### Projects
 ![Project Management Interface](docs/images/Projects.png)
 
+### Tasks
+![Task Management with Cumulated Time Tracking](docs/images/Tasks.png)
+
 ### Office Presence
 ![Office Presence Real-time Tracking](docs/images/OfficePresence.png)
 
@@ -37,6 +40,9 @@ Author(s) :
 - ✅ **Project Management** - Add, edit, and delete projects with custom colors
 - ✅ **Project Budgets & Earnings Tracking** - Set project budgets, track earnings based on hourly rates, and monitor remaining budget/hours
 - ✅ **Multi-Currency Support** - Support for 20+ currencies with configurable hourly rates
+- ✅ **Task Management** - Create, edit, and delete tasks with due dates, project association, and time allocation
+- ✅ **Task Time Tracking** - Start/stop time tracking directly from tasks with automatic time entry creation
+- ✅ **Cumulated Time Display** - Visual progress tracking showing actual time spent vs allocated time per task
 - ✅ **Time Tracking** - Live timer with 5-minute precision rounding
 - ✅ **Quick Entry** - Add past time entries manually
 - ✅ **Office Presence Detection** - Automatic presence tracking using Bluetooth Low Energy (BLE) devices

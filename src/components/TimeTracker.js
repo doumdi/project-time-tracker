@@ -9,6 +9,9 @@ const TimeTracker = ({ projects, onRefresh }) => {
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [quickEntryMode, setQuickEntryMode] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [tasksToShow, setTasksToShow] = useState(5); // Default to 5 tasks
+  const [activeTaskId, setActiveTaskId] = useState(null); // Track active task ID
   const [quickEntry, setQuickEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: '',
@@ -17,6 +20,13 @@ const TimeTracker = ({ projects, onRefresh }) => {
 
   // Load active timer state from localStorage on component mount
   useEffect(() => {
+    // Load task display count from localStorage
+    const storedTaskCount = localStorage.getItem('taskDisplayCount');
+    const count = storedTaskCount ? parseInt(storedTaskCount) || 5 : 5;
+    setTasksToShow(count);
+    
+    loadTasks();
+    
     const savedTimer = localStorage.getItem('activeTimer');
     if (savedTimer) {
       try {
@@ -27,6 +37,10 @@ const TimeTracker = ({ projects, onRefresh }) => {
           setIsTracking(true);
           setStartTime(timerData.startTime);
           setElapsedTime(Date.now() - timerData.startTime);
+          // Preserve taskId if it exists
+          if (timerData.taskId) {
+            setActiveTaskId(timerData.taskId);
+          }
         }
       } catch (error) {
         console.error('Error loading saved timer:', error);
@@ -34,6 +48,20 @@ const TimeTracker = ({ projects, onRefresh }) => {
       }
     }
   }, []);
+
+  // Reload tasks when tasksToShow changes
+  useEffect(() => {
+    loadTasks();
+  }, [tasksToShow]);
+
+  const loadTasks = async () => {
+    try {
+      const taskList = await window.electronAPI.getTasks({ limit: tasksToShow });
+      setTasks(taskList);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    }
+  };
 
   // Save active timer state to localStorage whenever it changes
   useEffect(() => {
@@ -44,11 +72,17 @@ const TimeTracker = ({ projects, onRefresh }) => {
         selectedProject,
         description
       };
+      
+      // Preserve taskId if this is a task timer
+      if (activeTaskId) {
+        timerData.taskId = activeTaskId;
+      }
+      
       localStorage.setItem('activeTimer', JSON.stringify(timerData));
     } else {
       localStorage.removeItem('activeTimer');
     }
-  }, [isTracking, startTime, selectedProject, description]);
+  }, [isTracking, startTime, selectedProject, description, activeTaskId]);
 
   useEffect(() => {
     let interval;
@@ -79,7 +113,15 @@ const TimeTracker = ({ projects, onRefresh }) => {
       // Stop tracking
       handleStopTimer();
     } else {
-      // Start tracking
+      // Check if there's an active task timer before starting a new timer
+      if (activeTaskId) {
+        if (!window.confirm(t('timer.stopTaskTimerConfirm') || 'A task timer is currently active. Stop it and start a new timer?')) {
+          return;
+        }
+      }
+      
+      // Start tracking - clear any previous task association
+      setActiveTaskId(null);
       setStartTime(Date.now());
       setElapsedTime(0);
       setIsTracking(true);
@@ -107,11 +149,19 @@ const TimeTracker = ({ projects, onRefresh }) => {
 
       await window.electronAPI.addTimeEntry(timeEntry);
       
+      // Deactivate any active task when stopping timer
+      try {
+        await window.electronAPI.setActiveTask(null);
+      } catch (taskError) {
+        console.warn('Error deactivating task:', taskError);
+      }
+      
       // Reset state
       setIsTracking(false);
       setStartTime(null);
       setElapsedTime(0);
       setDescription('');
+      setActiveTaskId(null); // Clear task association
       
       // Clear the saved timer from localStorage
       localStorage.removeItem('activeTimer');
@@ -123,8 +173,16 @@ const TimeTracker = ({ projects, onRefresh }) => {
       console.error('Error saving time entry:', error);
       alert(`${t('timer.errorSaving')}: ` + error.message);
       setIsTracking(false);
+      setActiveTaskId(null); // Clear task association on error
       // Clear the saved timer from localStorage even on error
       localStorage.removeItem('activeTimer');
+      
+      // Still try to deactivate task even on error
+      try {
+        await window.electronAPI.setActiveTask(null);
+      } catch (taskError) {
+        console.warn('Error deactivating task after timer error:', taskError);
+      }
     }
   };
 
@@ -167,6 +225,51 @@ const TimeTracker = ({ projects, onRefresh }) => {
   };
 
   const quickDurations = [5, 15, 30, 60, 120, 240, 480]; // in minutes
+
+  const handleTaskStart = async (task) => {
+    try {
+      if (!task.project_id) {
+        alert('This task needs a project to track time');
+        return;
+      }
+
+      // Set this task as active
+      await window.electronAPI.setActiveTask(task.id);
+      
+      // Set up timer for this task
+      setSelectedProject(task.project_id.toString());
+      setDescription(`Working on: ${task.name}`);
+      setIsTracking(true);
+      setStartTime(Date.now());
+      setElapsedTime(0);
+      
+      // Save timer data to localStorage
+      const timerData = {
+        isTracking: true,
+        startTime: Date.now(),
+        selectedProject: task.project_id,
+        description: `Working on: ${task.name}`,
+        taskId: task.id
+      };
+      localStorage.setItem('activeTimer', JSON.stringify(timerData));
+      
+      loadTasks(); // Refresh tasks to show updated status
+      alert(`Started tracking time for task: ${task.name}`);
+    } catch (error) {
+      console.error('Error starting task:', error);
+      alert('Error starting task');
+    }
+  };
+
+  const handleTaskStop = async () => {
+    try {
+      await handleStartStop(); // This will handle the time entry creation
+      await window.electronAPI.setActiveTask(null); // Deactivate task
+      loadTasks(); // Refresh tasks
+    } catch (error) {
+      console.error('Error stopping task:', error);
+    }
+  };
 
   return (
     <div className="fade-in">
@@ -229,6 +332,28 @@ const TimeTracker = ({ projects, onRefresh }) => {
             {!quickEntryMode ? (
               /* Live Timer Mode */
               <>
+                {/* Task Timer Indicator */}
+                {activeTaskId && isTracking && (
+                  <div style={{ 
+                    backgroundColor: '#e3f2fd', 
+                    border: '1px solid #2196f3', 
+                    borderRadius: '0.5rem', 
+                    padding: '1rem', 
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>🎯</span>
+                    <div>
+                      <strong>{t('timer.taskTimerActive')}</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                        {t('timer.trackingTaskTime')}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="timer-display">
                   {formatElapsedTime(elapsedTime)}
                 </div>
@@ -310,6 +435,83 @@ const TimeTracker = ({ projects, onRefresh }) => {
               </form>
             )}
           </>
+        )}
+
+        {/* Recent Tasks Section */}
+        {tasks.length > 0 && (
+          <div style={{ marginTop: '2rem', borderTop: '1px solid #ddd', paddingTop: '2rem' }}>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem' }}>
+              Recent Tasks ({tasks.length})
+            </h3>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {tasks.map(task => {
+                const isActiveTask = task.is_active;
+                const hasProject = task.project_id && task.project_name;
+                
+                return (
+                  <div 
+                    key={task.id} 
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '0.75rem',
+                      margin: '0.5rem 0',
+                      border: `1px solid ${isActiveTask ? '#4CAF50' : '#ddd'}`,
+                      borderRadius: '6px',
+                      background: isActiveTask ? '#f0f8f0' : '#fff'
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <strong>{task.name}</strong>
+                        {isActiveTask && <span style={{ color: '#4CAF50' }}>● Active</span>}
+                      </div>
+                      {hasProject && (
+                        <div style={{ 
+                          fontSize: '0.9rem', 
+                          color: task.project_color,
+                          fontWeight: 'bold',
+                          marginTop: '0.25rem'
+                        }}>
+                          {task.project_name}
+                        </div>
+                      )}
+                      {task.due_date && (
+                        <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div style={{ marginLeft: '1rem' }}>
+                      {!isActiveTask && hasProject && !isTracking && (
+                        <button 
+                          className="btn btn-small btn-success"
+                          onClick={() => handleTaskStart(task)}
+                        >
+                          Start
+                        </button>
+                      )}
+                      {isActiveTask && isTracking && (
+                        <button 
+                          className="btn btn-small btn-danger"
+                          onClick={handleTaskStop}
+                        >
+                          Stop
+                        </button>
+                      )}
+                      {!hasProject && (
+                        <span style={{ fontSize: '0.8rem', color: '#999' }}>
+                          No project
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </div>
