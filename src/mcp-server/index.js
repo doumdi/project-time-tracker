@@ -1,31 +1,21 @@
 #!/usr/bin/env node
 
+// This file is deprecated - the MCP server now runs in-process with the main Electron application
+// If you need to use the MCP server as a standalone process, use one of the server classes directly
+
 const { TimeTrackerHttpMCPServer } = require('./http-server.js');
-const database = require('../database/db.js');
+const { TimeTrackerMCPServer } = require('./server.js');
 
-async function main() {
-  try {
-    // Get port from command line arguments or environment variable
-    const port = process.argv[2] ? parseInt(process.argv[2]) : (process.env.MCP_SERVER_PORT ? parseInt(process.env.MCP_SERVER_PORT) : 3001);
-    
-    if (isNaN(port) || port < 1024 || port > 65535) {
-      console.error('Invalid port number. Must be between 1024 and 65535.');
-      process.exit(1);
-    }
-    
-    // Initialize database first
-    await database.initDatabase();
-    
-    // Create and run HTTP MCP server
-    const server = new TimeTrackerHttpMCPServer(database, port);
-    await server.run();
-  } catch (error) {
-    console.error('Failed to start MCP server:', error);
-    process.exit(1);
-  }
-}
+// For backward compatibility, export the classes
+module.exports = {
+  TimeTrackerHttpMCPServer,
+  TimeTrackerMCPServer
+};
 
-// Run the server if this file is executed directly
+// Only run as standalone if this file is executed directly
 if (require.main === module) {
-  main();
+  console.error('This MCP server now runs in-process with the main Electron application.');
+  console.error('The standalone server mode is deprecated.');
+  console.error('Please start the application normally to use the MCP server.');
+  process.exit(1);
 }

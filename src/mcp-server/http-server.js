@@ -9,8 +9,8 @@ const {
 } = require('@modelcontextprotocol/sdk/types.js');
 
 class TimeTrackerHttpMCPServer {
-  constructor(database, port = 3001) {
-    this.database = database;
+  constructor(ipcInterface, port = 3001) {
+    this.ipc = ipcInterface;
     this.port = port;
     this.app = express();
     this.transports = {}; // Store transports by session ID
@@ -542,7 +542,7 @@ class TimeTrackerHttpMCPServer {
 
   // Project handlers
   async handleGetProjects() {
-    const projects = await this.database.getProjects();
+    const projects = await this.ipc.handle('get-projects');
     return {
       content: [
         {
@@ -554,7 +554,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleAddProject(args) {
-    const project = await this.database.addProject(args);
+    const project = await this.ipc.handle('add-project', args);
     return {
       content: [
         {
@@ -566,7 +566,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleUpdateProject(args) {
-    const project = await this.database.updateProject(args);
+    const project = await this.ipc.handle('update-project', args);
     return {
       content: [
         {
@@ -578,7 +578,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleDeleteProject(args) {
-    const result = await this.database.deleteProject(args.id);
+    const result = await this.ipc.handle('delete-project', args.id);
     return {
       content: [
         {
@@ -591,7 +591,7 @@ class TimeTrackerHttpMCPServer {
 
   // Task handlers
   async handleGetTasks(args = {}) {
-    const tasks = await this.database.getTasks(args);
+    const tasks = await this.ipc.handle('get-tasks', args);
     return {
       content: [
         {
@@ -603,7 +603,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleAddTask(args) {
-    const task = await this.database.addTask(args);
+    const task = await this.ipc.handle('add-task', args);
     return {
       content: [
         {
@@ -615,7 +615,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleUpdateTask(args) {
-    const task = await this.database.updateTask(args);
+    const task = await this.ipc.handle('update-task', args);
     return {
       content: [
         {
@@ -627,7 +627,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleDeleteTask(args) {
-    const result = await this.database.deleteTask(args.id);
+    const result = await this.ipc.handle('delete-task', args.id);
     return {
       content: [
         {
@@ -639,7 +639,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleSetActiveTask(args) {
-    const result = await this.database.setActiveTask(args.task_id);
+    const result = await this.ipc.handle('set-active-task', args.task_id);
     return {
       content: [
         {
@@ -651,7 +651,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleGetActiveTask() {
-    const task = await this.database.getActiveTask();
+    const task = await this.ipc.handle('get-active-task');
     return {
       content: [
         {
@@ -664,7 +664,7 @@ class TimeTrackerHttpMCPServer {
 
   // Time entry handlers
   async handleGetTimeEntries(args = {}) {
-    const entries = await this.database.getTimeEntries(args);
+    const entries = await this.ipc.handle('get-time-entries', args);
     return {
       content: [
         {
@@ -676,7 +676,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleAddTimeEntry(args) {
-    const entry = await this.database.addTimeEntry(args);
+    const entry = await this.ipc.handle('add-time-entry', args);
     return {
       content: [
         {
@@ -688,7 +688,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleUpdateTimeEntry(args) {
-    const entry = await this.database.updateTimeEntry(args);
+    const entry = await this.ipc.handle('update-time-entry', args);
     return {
       content: [
         {
@@ -700,7 +700,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleDeleteTimeEntry(args) {
-    const result = await this.database.deleteTimeEntry(args.id);
+    const result = await this.ipc.handle('delete-time-entry', args.id);
     return {
       content: [
         {
@@ -713,7 +713,7 @@ class TimeTrackerHttpMCPServer {
 
   // Office presence handlers
   async handleGetOfficePresence(args = {}) {
-    const presence = await this.database.getOfficePresence(args);
+    const presence = await this.ipc.handle('get-office-presence', args);
     return {
       content: [
         {
@@ -725,7 +725,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleAddOfficePresence(args) {
-    const presence = await this.database.addOfficePresence(args);
+    const presence = await this.ipc.handle('add-office-presence', args);
     return {
       content: [
         {
@@ -737,7 +737,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleUpdateOfficePresence(args) {
-    const presence = await this.database.updateOfficePresence(args);
+    const presence = await this.ipc.handle('update-office-presence', args);
     return {
       content: [
         {
@@ -749,7 +749,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleDeleteOfficePresence(args) {
-    const result = await this.database.deleteOfficePresence(args.id);
+    const result = await this.ipc.handle('delete-office-presence', args.id);
     return {
       content: [
         {
@@ -762,7 +762,7 @@ class TimeTrackerHttpMCPServer {
 
   // BLE device handlers
   async handleGetBleDevices() {
-    const devices = await this.database.getBleDevices();
+    const devices = await this.ipc.handle('get-ble-devices');
     return {
       content: [
         {
@@ -774,7 +774,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleAddBleDevice(args) {
-    const device = await this.database.addBleDevice(args);
+    const device = await this.ipc.handle('add-ble-device', args);
     return {
       content: [
         {
@@ -786,7 +786,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleUpdateBleDevice(args) {
-    const device = await this.database.updateBleDevice(args);
+    const device = await this.ipc.handle('update-ble-device', args);
     return {
       content: [
         {
@@ -798,7 +798,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleDeleteBleDevice(args) {
-    const result = await this.database.deleteBleDevice(args.id);
+    const result = await this.ipc.handle('delete-ble-device', args.id);
     return {
       content: [
         {
@@ -811,7 +811,7 @@ class TimeTrackerHttpMCPServer {
 
   // Report handlers
   async handleGetTimeSummary(args = {}) {
-    const summary = await this.database.getTimeSummary(args);
+    const summary = await this.ipc.handle('get-time-summary', args);
     return {
       content: [
         {
@@ -823,7 +823,7 @@ class TimeTrackerHttpMCPServer {
   }
 
   async handleGetOfficePresenceSummary(args = {}) {
-    const summary = await this.database.getOfficePresenceSummary(args);
+    const summary = await this.ipc.handle('get-office-presence-summary', args);
     return {
       content: [
         {

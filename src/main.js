@@ -167,6 +167,13 @@ app.on('before-quit', async (event) => {
     console.error('Error saving active sessions before quit:', error);
   }
 
+  // Stop MCP server before closing database
+  try {
+    await stopMcpServer();
+  } catch (err) {
+    console.warn('Error stopping MCP server during shutdown:', err);
+  }
+
   // Finally, close the database after all async activity and timers have been stopped
   try {
     if (database && typeof database.closeDatabase === 'function') {
@@ -185,6 +192,9 @@ app.on('activate', () => {
 
 // Database operations will be handled here
 const database = require('./database/db');
+
+// Import MCP server functionality
+const { TimeTrackerHttpMCPServer } = require('./mcp-server/http-server');
 
 // Import BLE functionality
 let noble;
@@ -218,6 +228,7 @@ let bleState = {
 // MCP server state
 let mcpServerState = {
   server: null,
+  httpServer: null,
   isRunning: false,
   enabled: false,
   port: 3001
@@ -510,6 +521,70 @@ ipcMain.handle('get-mcp-server-status', async () => {
   };
 });
 
+// Create IPC interface for MCP server to use
+const mcpIpcInterface = {
+  handle: async (channel, ...args) => {
+    // Simulate IPC call by directly calling the existing IPC handlers
+    try {
+      switch (channel) {
+        case 'get-projects':
+          return await database.getProjects();
+        case 'add-project':
+          return await database.addProject(args[0]);
+        case 'update-project':
+          return await database.updateProject(args[0]);
+        case 'delete-project':
+          return await database.deleteProject(args[0]);
+        case 'get-tasks':
+          return await database.getTasks(args[0]);
+        case 'add-task':
+          return await database.addTask(args[0]);
+        case 'update-task':
+          return await database.updateTask(args[0]);
+        case 'delete-task':
+          return await database.deleteTask(args[0]);
+        case 'set-active-task':
+          return await database.setActiveTask(args[0]);
+        case 'get-active-task':
+          return await database.getActiveTask();
+        case 'get-time-entries':
+          return await database.getTimeEntries(args[0]);
+        case 'add-time-entry':
+          return await database.addTimeEntry(args[0]);
+        case 'update-time-entry':
+          return await database.updateTimeEntry(args[0]);
+        case 'delete-time-entry':
+          return await database.deleteTimeEntry(args[0]);
+        case 'get-office-presence':
+          return await database.getOfficePresence(args[0]);
+        case 'add-office-presence':
+          return await database.addOfficePresence(args[0]);
+        case 'update-office-presence':
+          return await database.updateOfficePresence(args[0]);
+        case 'delete-office-presence':
+          return await database.deleteOfficePresence(args[0]);
+        case 'get-ble-devices':
+          return await database.getBleDevices();
+        case 'add-ble-device':
+          return await database.addBleDevice(args[0]);
+        case 'update-ble-device':
+          return await database.updateBleDevice(args[0]);
+        case 'delete-ble-device':
+          return await database.deleteBleDevice(args[0]);
+        case 'get-time-summary':
+          return await database.getTimeSummary(args[0]);
+        case 'get-office-presence-summary':
+          return await database.getOfficePresenceSummary(args[0]);
+        default:
+          throw new Error(`Unknown IPC channel: ${channel}`);
+      }
+    } catch (error) {
+      console.error(`[MCP IPC] Error handling ${channel}:`, error);
+      throw error;
+    }
+  }
+};
+
 // MCP server functions
 async function startMcpServer(port = 3001) {
   if (mcpServerState.isRunning) {
@@ -524,56 +599,28 @@ async function startMcpServer(port = 3001) {
   }
 
   try {
-    const { spawn } = require('child_process');
-    const path = require('path');
-    
-    const serverPath = path.join(__dirname, 'mcp-server', 'index.js');
-    
     // Store the port
     mcpServerState.port = port;
     
-    mcpServerState.server = spawn('node', [serverPath, port.toString()], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: __dirname,
-      env: { ...process.env, MCP_SERVER_PORT: port.toString() }
-    });
-
-    mcpServerState.server.on('error', (error) => {
-      console.error('[MCP Server] Error:', error);
-      mcpServerState.isRunning = false;
-      mcpServerState.enabled = false;
-    });
-
-    mcpServerState.server.on('exit', (code, signal) => {
-      console.log(`[MCP Server] Exited with code ${code}, signal ${signal}`);
-      mcpServerState.isRunning = false;
-      mcpServerState.enabled = false;
-    });
-
-    mcpServerState.server.stdout.on('data', (data) => {
-      console.log(`[MCP Server] ${data.toString().trim()}`);
-    });
-
-    mcpServerState.server.stderr.on('data', (data) => {
-      const message = data.toString().trim();
-      if (message.includes('listening on port') || message.includes(`Server running on port ${port}`)) {
-        mcpServerState.isRunning = true;
-        mcpServerState.enabled = true;
-        console.log(`[MCP Server] Started successfully on port ${port}`);
-      } else {
-        console.error(`[MCP Server] ${message}`);
-      }
-    });
-
-    console.log(`[MCP Server] Starting on port ${port}...`);
+    // Create the MCP server instance with IPC interface
+    mcpServerState.server = new TimeTrackerHttpMCPServer(mcpIpcInterface, port);
     
-    // Wait a moment for the server to start
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Start the HTTP server
+    mcpServerState.httpServer = await mcpServerState.server.run();
+    
+    mcpServerState.isRunning = true;
+    mcpServerState.enabled = true;
+    
+    console.log(`[MCP Server] Started successfully on port ${port}`);
+    console.log(`[MCP Server] MCP endpoint: http://localhost:${port}/mcp`);
+    console.log(`[MCP Server] Health check: http://localhost:${port}/health`);
     
   } catch (error) {
     console.error('[MCP Server] Failed to start:', error);
     mcpServerState.enabled = false;
     mcpServerState.isRunning = false;
+    mcpServerState.server = null;
+    mcpServerState.httpServer = null;
     throw error;
   }
 }
@@ -585,24 +632,13 @@ async function stopMcpServer() {
   }
 
   try {
-    mcpServerState.server.kill('SIGTERM');
+    // Close the MCP HTTP server
+    if (mcpServerState.server && typeof mcpServerState.server.close === 'function') {
+      await mcpServerState.server.close();
+    }
     
-    // Wait for graceful shutdown
-    await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        if (mcpServerState.server) {
-          mcpServerState.server.kill('SIGKILL');
-        }
-        resolve();
-      }, 5000);
-      
-      mcpServerState.server.on('exit', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
-
     mcpServerState.server = null;
+    mcpServerState.httpServer = null;
     mcpServerState.enabled = false;
     mcpServerState.isRunning = false;
     
