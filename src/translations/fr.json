@@ -189,7 +189,9 @@
     "errorSaving": "Erreur lors de la sauvegarde des paramètres",
     "mcpServer": "Serveur MCP",
     "enableMcpServer": "Activer le Serveur MCP",
-    "mcpServerDescription": "Exposer toutes les fonctionnalités de l'application via le serveur Model Context Protocol (MCP) pour les systèmes IA. Le serveur fonctionne sur localhost lorsqu'il est activé."
+    "mcpServerDescription": "Exposer toutes les fonctionnalités de l'application via le serveur Model Context Protocol (MCP) pour les systèmes IA. Le serveur écoute sur un port HTTP localhost lorsqu'il est activé.",
+    "mcpServerPort": "Port du Serveur MCP",
+    "mcpServerPortDescription": "Numéro de port pour le serveur MCP (1024-65535). Par défaut : 3001"
   },
   "common": {
     "save": "Enregistrer",

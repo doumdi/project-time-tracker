@@ -21,6 +21,7 @@ const Settings = () => {
   const [presenceSaveInterval, setPresenceSaveInterval] = useState(15); // Default 15 minutes
   const [taskDisplayCount, setTaskDisplayCount] = useState(5); // Default 5 tasks
   const [mcpServerEnabled, setMcpServerEnabled] = useState(false);
+  const [mcpServerPort, setMcpServerPort] = useState(3001);
 
   // Load version information
   useEffect(() => {
@@ -129,7 +130,7 @@ const Settings = () => {
     
     // Enable/disable MCP server via IPC
     try {
-      await window.electronAPI.enableMcpServer(enabled);
+      await window.electronAPI.enableMcpServer(enabled, mcpServerPort);
       alert(t('settings.settingsSaved'));
     } catch (error) {
       console.error('Failed to toggle MCP server:', error);
@@ -137,6 +138,26 @@ const Settings = () => {
       // Revert the toggle state
       setMcpServerEnabled(!enabled);
       localStorage.setItem('mcpServerEnabled', (!enabled).toString());
+    }
+  };
+
+  const handleMcpServerPortChange = async (e) => {
+    const port = parseInt(e.target.value);
+    if (isNaN(port) || port < 1024 || port > 65535) return;
+    
+    setMcpServerPort(port);
+    localStorage.setItem('mcpServerPort', port.toString());
+    
+    // If MCP server is currently enabled, restart it with new port
+    if (mcpServerEnabled && window.electronAPI) {
+      try {
+        await window.electronAPI.enableMcpServer(false); // Stop first
+        await window.electronAPI.enableMcpServer(true, port); // Start with new port
+        alert(t('settings.settingsSaved'));
+      } catch (error) {
+        console.error('Failed to update MCP server port:', error);
+        alert(t('settings.errorSaving') || 'Error saving settings');
+      }
     }
   };
 
@@ -168,11 +189,16 @@ const Settings = () => {
       const mcpEnabled = storedMcpServer === 'true';
       setMcpServerEnabled(mcpEnabled);
       
+      // Load MCP server port
+      const storedMcpPort = localStorage.getItem('mcpServerPort');
+      const mcpPort = storedMcpPort ? parseInt(storedMcpPort) : 3001;
+      setMcpServerPort(mcpPort);
+      
       // Initialize MCP server if enabled
       if (mcpEnabled && window.electronAPI) {
         try {
-          await window.electronAPI.enableMcpServer(true);
-          console.log('MCP server initialized');
+          await window.electronAPI.enableMcpServer(true, mcpPort);
+          console.log('MCP server initialized on port', mcpPort);
         } catch (error) {
           console.error('Failed to initialize MCP server:', error);
         }
@@ -336,7 +362,26 @@ const Settings = () => {
                   {t('settings.enableMcpServer') || 'Enable MCP Server'}
                 </label>
                 <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
-                  {t('settings.mcpServerDescription') || 'Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server runs on localhost when enabled.'}
+                  {t('settings.mcpServerDescription') || 'Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server listens on localhost HTTP port when enabled.'}
+                </small>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">
+                  {t('settings.mcpServerPort') || 'MCP Server Port'}
+                </label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={mcpServerPort}
+                  onChange={handleMcpServerPortChange}
+                  min="1024"
+                  max="65535"
+                  step="1"
+                  style={{ maxWidth: '120px' }}
+                />
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.mcpServerPortDescription') || 'Port number for the MCP server (1024-65535). Default: 3001'}
                 </small>
               </div>
 
@@ -348,9 +393,11 @@ const Settings = () => {
                   borderRadius: '6px',
                   fontSize: '0.9rem'
                 }}>
-                  <strong>⚠️ Security Notice:</strong> The MCP server exposes read/write access to all your data. 
+                  <strong>⚠️ Security Notice:</strong> The MCP server exposes read/write access to all your data via HTTP on localhost:{mcpServerPort}. 
                   Only enable this feature if you understand the security implications and trust the AI systems 
                   that will connect to it.
+                  <br /><br />
+                  <strong>Server URL:</strong> http://localhost:{mcpServerPort}/mcp
                 </div>
               )}
             </div>

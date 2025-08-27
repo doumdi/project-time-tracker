@@ -189,7 +189,9 @@
     "errorSaving": "Error saving settings",
     "mcpServer": "MCP Server",
     "enableMcpServer": "Enable MCP Server",
-    "mcpServerDescription": "Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server runs on localhost when enabled."
+    "mcpServerDescription": "Expose all app functionalities via Model Context Protocol (MCP) server for AI systems. Server listens on localhost HTTP port when enabled.",
+    "mcpServerPort": "MCP Server Port",
+    "mcpServerPortDescription": "Port number for the MCP server (1024-65535). Default: 3001"
   },
   "common": {
     "save": "Save",

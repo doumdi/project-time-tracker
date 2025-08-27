@@ -62,6 +62,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   
   // MCP server operations
-  enableMcpServer: (enabled) => ipcRenderer.invoke('enable-mcp-server', enabled),
+  enableMcpServer: (enabled, port) => ipcRenderer.invoke('enable-mcp-server', enabled, port),
   getMcpServerStatus: () => ipcRenderer.invoke('get-mcp-server-status')
 });

@@ -200,7 +200,8 @@ let bleState = {
 let mcpServerState = {
   server: null,
   isRunning: false,
-  enabled: false
+  enabled: false,
+  port: 3001
 };
 
 // IPC handlers for database operations
@@ -468,10 +469,10 @@ ipcMain.handle('get-presence-save-interval', async () => {
 });
 
 // MCP server IPC handlers
-ipcMain.handle('enable-mcp-server', async (event, enabled) => {
+ipcMain.handle('enable-mcp-server', async (event, enabled, port) => {
   try {
     if (enabled) {
-      await startMcpServer();
+      await startMcpServer(port || 3001);
     } else {
       await stopMcpServer();
     }
@@ -490,7 +491,7 @@ ipcMain.handle('get-mcp-server-status', async () => {
 });
 
 // MCP server functions
-async function startMcpServer() {
+async function startMcpServer(port = 3001) {
   if (mcpServerState.isRunning) {
     console.log('[MCP Server] Already running');
     return;
@@ -502,9 +503,13 @@ async function startMcpServer() {
     
     const serverPath = path.join(__dirname, 'mcp-server', 'index.js');
     
-    mcpServerState.server = spawn('node', [serverPath], {
+    // Store the port
+    mcpServerState.port = port;
+    
+    mcpServerState.server = spawn('node', [serverPath, port.toString()], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: __dirname
+      cwd: __dirname,
+      env: { ...process.env, MCP_SERVER_PORT: port.toString() }
     });
 
     mcpServerState.server.on('error', (error) => {
@@ -523,16 +528,16 @@ async function startMcpServer() {
 
     mcpServerState.server.stderr.on('data', (data) => {
       const message = data.toString().trim();
-      if (message.includes('running on stdio')) {
+      if (message.includes('listening on port') || message.includes(`Server running on port ${port}`)) {
         mcpServerState.isRunning = true;
-        console.log('[MCP Server] Started successfully');
+        console.log(`[MCP Server] Started successfully on port ${port}`);
       } else {
         console.error(`[MCP Server] ${message}`);
       }
     });
 
     mcpServerState.enabled = true;
-    console.log('[MCP Server] Starting...');
+    console.log(`[MCP Server] Starting on port ${port}...`);
     
     // Wait a moment for the server to start
     await new Promise(resolve => setTimeout(resolve, 1000));
