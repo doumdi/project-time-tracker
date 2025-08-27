@@ -272,6 +272,67 @@ function generateOfficePresence(date, workSessions, devices) {
 }
 
 /**
+ * Generate realistic tasks for a project
+ * Returns array of tasks for the project
+ */
+function generateProjectTasks(project, projectIndex) {
+  const tasks = [];
+  const taskCount = randomInt(3, 5); // 3-5 tasks per project
+  const today = new Date();
+  
+  // Task name templates specific to project types
+  const taskTemplates = [
+    'Setup project infrastructure',
+    'Design user authentication',
+    'Implement core API endpoints',
+    'Create responsive UI components',
+    'Add unit test coverage',
+    'Setup CI/CD pipeline',
+    'Database schema optimization',
+    'Security audit and fixes',
+    'Performance monitoring setup',
+    'User documentation writing',
+    'Integration with third-party APIs',
+    'Error handling improvements',
+    'Mobile responsiveness testing',
+    'Code refactoring and cleanup',
+    'Feature flag implementation'
+  ];
+  
+  for (let i = 0; i < taskCount; i++) {
+    const taskName = randomChoice(taskTemplates);
+    
+    // Generate due dates - mix of overdue, upcoming, and no due date
+    let dueDate = null;
+    const dueDateType = randomInt(1, 4);
+    if (dueDateType === 1) {
+      // Overdue (1-30 days ago)
+      dueDate = new Date(today.getTime() - randomInt(1, 30) * 24 * 60 * 60 * 1000);
+    } else if (dueDateType === 2) {
+      // Upcoming (1-60 days from now)
+      dueDate = new Date(today.getTime() + randomInt(1, 60) * 24 * 60 * 60 * 1000);
+    }
+    // dueDateType === 3 or 4 means no due date (null)
+    
+    // Allocated time between 30 minutes and 8 hours
+    const allocatedTime = randomInt(30, 480);
+    
+    // Only mark one task as active across all projects (first project, first task)
+    const isActive = projectIndex === 0 && i === 0;
+    
+    tasks.push({
+      name: taskName,
+      due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
+      project_id: project.id,
+      allocated_time: allocatedTime,
+      is_active: isActive
+    });
+  }
+  
+  return tasks;
+}
+
+/**
  * Execute a SQL statement and return a promise
  */
 function runSQL(db, sql, params = []) {
@@ -292,7 +353,7 @@ function runSQL(db, sql, params = []) {
 async function clearData(db) {
   console.log('🧹 Clearing existing data...');
   
-  const tables = ['time_entries', 'office_presence', 'ble_devices', 'projects'];
+  const tables = ['time_entries', 'office_presence', 'tasks', 'ble_devices', 'projects'];
   
   for (const table of tables) {
     try {
@@ -355,6 +416,17 @@ async function initializeTables(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      due_date DATE,
+      project_id INTEGER,
+      allocated_time INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
     )`
   ];
 
@@ -423,7 +495,32 @@ async function populateDatabase() {
           }
         }
         
-        // 3. Generate time entries for the last 3 months
+        // 3. Create tasks for each project
+        console.log('\n📋 Creating tasks for projects...');
+        let totalTasks = 0;
+        for (let i = 0; i < projects.length; i++) {
+          const project = projects[i];
+          const projectTasks = generateProjectTasks(project, i);
+          
+          for (const task of projectTasks) {
+            try {
+              await runSQL(db,
+                'INSERT INTO tasks (name, due_date, project_id, allocated_time, is_active) VALUES (?, ?, ?, ?, ?)',
+                [task.name, task.due_date, task.project_id, task.allocated_time, task.is_active]
+              );
+              totalTasks++;
+              
+              const status = task.is_active ? ' (ACTIVE)' : '';
+              const dueInfo = task.due_date ? ` - Due: ${task.due_date}` : '';
+              const timeInfo = ` - ${task.allocated_time}min`;
+              console.log(`  ✅ Created task: ${task.name}${status}${dueInfo}${timeInfo}`);
+            } catch (err) {
+              console.error(`  ❌ Failed to create task ${task.name}:`, err.message);
+            }
+          }
+        }
+        
+        // 4. Generate time entries for the last 3 months
         console.log('\n⏰ Generating time entries for last 3 months...');
         
         const endDate = new Date();
@@ -472,6 +569,7 @@ async function populateDatabase() {
         console.log('\n🎉 Database population completed successfully!');
         console.log('\nGenerated data summary:');
         console.log(`  • ${projects.length} software development projects`);
+        console.log(`  • ${totalTasks} realistic development tasks`);
         console.log(`  • ${devices.length} BLE devices for presence tracking`);
         console.log(`  • ${totalEntries} time entries over 3 months`);
         console.log(`  • ${Math.round(totalMinutes / 60)} total hours logged`);
@@ -479,9 +577,10 @@ async function populateDatabase() {
         
         console.log('\n💡 You can now:');
         console.log('  • Take screenshots with populated data');
-        console.log('  • Test all application features');
+        console.log('  • Test all application features (including task management)');
         console.log('  • Run analytics and reports');
         console.log('  • Demonstrate BLE presence tracking');
+        console.log('  • Test task time tracking integration');
         
         console.log('\n🔄 To repopulate with fresh data, run:');
         console.log('  node scripts/populate-dev-data.js --clear');
