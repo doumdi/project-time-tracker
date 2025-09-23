@@ -245,7 +245,15 @@
     "weeklySummary": "Résumé Hebdomadaire",
     "weekOf": "Semaine du",
     "dayName": "Jour",
-    "clickToViewDay": "Cliquez pour voir ce jour"
+    "clickToViewDay": "Cliquez pour voir ce jour",
+    "total": "Total",
+    "monday": "Lundi",
+    "tuesday": "Mardi",
+    "wednesday": "Mercredi", 
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi",
+    "sunday": "Dimanche"
   },
   "reports": {
     "title": "Rapports",

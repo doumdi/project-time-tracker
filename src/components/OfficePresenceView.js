@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format, parseISO, startOfDay, startOfWeek, addDays } from 'date-fns';
+import { enUS, fr } from 'date-fns/locale';
 
 const OfficePresenceView = ({ onRefresh }) => {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const [presenceData, setPresenceData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [summary, setSummary] = useState(null);
@@ -160,16 +161,59 @@ const OfficePresenceView = ({ onRefresh }) => {
     setSelectedDate(date);
   };
 
+  const getLocalizedDayName = (dayName) => {
+    const dayMap = {
+      'Monday': t('presence.monday'),
+      'Tuesday': t('presence.tuesday'),
+      'Wednesday': t('presence.wednesday'),
+      'Thursday': t('presence.thursday'),
+      'Friday': t('presence.friday'),
+      'Saturday': t('presence.saturday'),
+      'Sunday': t('presence.sunday')
+    };
+    return dayMap[dayName] || dayName;
+  };
+
+  const formatLocalizedDate = (dateString) => {
+    const date = parseISO(dateString);
+    const locale = currentLanguage === 'fr' ? fr : enUS;
+    
+    if (currentLanguage === 'fr') {
+      // French format: "22 sept." 
+      return format(date, 'd MMM', { locale });
+    } else {
+      // English format: "Sep 22"
+      return format(date, 'MMM d', { locale });
+    }
+  };
+
+  const formatLocalizedWeekHeader = (dateString) => {
+    const date = parseISO(dateString);
+    const locale = currentLanguage === 'fr' ? fr : enUS;
+    
+    if (currentLanguage === 'fr') {
+      // French format: "22 septembre 2025"
+      return format(date, 'd MMMM yyyy', { locale });
+    } else {
+      // English format: "Sep 22, 2025"
+      return format(date, 'MMM dd, yyyy', { locale });
+    }
+  };
+
   const renderWeeklySummary = () => {
     if (weeklySummary.length === 0) return null;
 
     const weekStart = weeklySummary[0]?.date;
     if (!weekStart) return null;
 
+    // Calculate totals
+    const totalMinutes = weeklySummary.reduce((sum, day) => sum + day.total_minutes, 0);
+    const totalSessions = weeklySummary.reduce((sum, day) => sum + day.session_count, 0);
+
     return (
       <div className="weekly-summary">
         <div className="weekly-summary-card">
-          <h3>{t('presence.weeklySummary')} - {t('presence.weekOf')} {format(parseISO(weekStart), 'MMM dd, yyyy')}</h3>
+          <h3>{t('presence.weeklySummary')} - {t('presence.weekOf')} {formatLocalizedWeekHeader(weekStart)}</h3>
           <div className="weekly-table-container">
             <table className="weekly-table">
               <thead>
@@ -188,15 +232,22 @@ const OfficePresenceView = ({ onRefresh }) => {
                     onClick={() => handleDateClick(day.date)}
                     title={t('presence.clickToViewDay')}
                   >
-                    <td className="day-name">{day.day_name}</td>
+                    <td className="day-name">{getLocalizedDayName(day.day_name)}</td>
                     <td className="day-date">
-                      {format(parseISO(day.date), 'MMM d')}
+                      {formatLocalizedDate(day.date)}
                       {day.is_today && <span className="today-badge">{t('presence.today')}</span>}
                     </td>
                     <td className="day-time">{formatDuration(day.total_minutes)}</td>
                     <td className="day-sessions">{day.session_count}</td>
                   </tr>
                 ))}
+                {/* Total row */}
+                <tr className="weekly-row total-row">
+                  <td className="day-name total-label">{t('presence.total')}</td>
+                  <td className="day-date">-</td>
+                  <td className="day-time total-time">{formatDuration(totalMinutes)}</td>
+                  <td className="day-sessions total-sessions">{totalSessions}</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -605,6 +656,32 @@ const OfficePresenceView = ({ onRefresh }) => {
         .weekly-row.selected-row {
           background-color: #cce5ff;
           font-weight: 600;
+        }
+
+        .weekly-row.total-row {
+          background-color: #e8f5e8;
+          border-top: 2px solid #28a745;
+          font-weight: 600;
+          cursor: default;
+        }
+
+        .weekly-row.total-row:hover {
+          background-color: #e8f5e8;
+        }
+
+        .total-label {
+          color: #28a745;
+          font-weight: 700;
+        }
+
+        .total-time {
+          color: #28a745;
+          font-weight: 700;
+        }
+
+        .total-sessions {
+          color: #28a745;
+          font-weight: 700;
         }
 
         .day-name {
