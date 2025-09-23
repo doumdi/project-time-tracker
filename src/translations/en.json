@@ -241,7 +241,11 @@
     "detectedDevices": "Detected Devices",
     "todayTotal": "Today's Total",
     "currentSessionTime": "Current Session Time",
-    "detectedFor": "Detected for"
+    "detectedFor": "Detected for",
+    "weeklySummary": "Weekly Summary",
+    "weekOf": "Week of",
+    "dayName": "Day",
+    "clickToViewDay": "Click to view this day"
   },
   "reports": {
     "title": "Reports",
