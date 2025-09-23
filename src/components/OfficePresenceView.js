@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, startOfWeek, addDays } from 'date-fns';
+import { enUS, fr } from 'date-fns/locale';
 
 const OfficePresenceView = ({ onRefresh }) => {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const [presenceData, setPresenceData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [summary, setSummary] = useState(null);
+  const [weeklySummary, setWeeklySummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentStatus, setCurrentStatus] = useState({
     isPresent: false,
@@ -42,8 +44,14 @@ const OfficePresenceView = ({ onRefresh }) => {
     // Refresh current status every 30 seconds
     const statusInterval = setInterval(loadCurrentStatus, 30000);
     
+    // Refresh presence data and weekly summary every minute
+    const dataRefreshInterval = setInterval(() => {
+      loadPresenceData();
+    }, 60000);
+    
     return () => {
       clearInterval(statusInterval);
+      clearInterval(dataRefreshInterval);
       if (window.electronAPI) {
         window.electronAPI.removeAllListeners('presence-status-updated');
         window.electronAPI.removeAllListeners('presence-data-updated');
@@ -93,16 +101,18 @@ const OfficePresenceView = ({ onRefresh }) => {
   const loadPresenceData = async () => {
     setLoading(true);
     try {
-      const [entries, summaryData] = await Promise.all([
+      const [entries, summaryData, weeklyData] = await Promise.all([
         window.electronAPI.getOfficePresence({ date: selectedDate }),
         window.electronAPI.getOfficePresenceSummary({ 
           startDate: selectedDate, 
           endDate: selectedDate 
-        })
+        }),
+        window.electronAPI.getOfficePresenceWeeklySummary(selectedDate)
       ]);
       
       setPresenceData(entries);
       setSummary(summaryData[0] || null);
+      setWeeklySummary(weeklyData);
     } catch (error) {
       console.error('Failed to load presence data:', error);
     } finally {
@@ -146,6 +156,108 @@ const OfficePresenceView = ({ onRefresh }) => {
   };
 
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
+
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+  };
+
+  const getLocalizedDayName = (dayName) => {
+    const dayMap = {
+      'Monday': t('presence.monday'),
+      'Tuesday': t('presence.tuesday'),
+      'Wednesday': t('presence.wednesday'),
+      'Thursday': t('presence.thursday'),
+      'Friday': t('presence.friday'),
+      'Saturday': t('presence.saturday'),
+      'Sunday': t('presence.sunday')
+    };
+    return dayMap[dayName] || dayName;
+  };
+
+  const formatLocalizedDate = (dateString) => {
+    const date = parseISO(dateString);
+    
+    if (currentLanguage === 'fr') {
+      // French format: "22 sept." - Manual formatting to avoid locale issues
+      const day = format(date, 'd');
+      const month = format(date, 'MMM', { locale: fr }).toLowerCase();
+      return `${day} ${month}.`;
+    } else {
+      // English format: "Sep 22"
+      return format(date, 'MMM d', { locale: enUS });
+    }
+  };
+
+  const formatLocalizedWeekHeader = (dateString) => {
+    const date = parseISO(dateString);
+    
+    if (currentLanguage === 'fr') {
+      // French format: "22 septembre 2025" - Manual formatting for consistency
+      const day = format(date, 'd');
+      const month = format(date, 'MMMM', { locale: fr });
+      const year = format(date, 'yyyy');
+      return `${day} ${month} ${year}`;
+    } else {
+      // English format: "Sep 22, 2025"
+      return format(date, 'MMM dd, yyyy', { locale: enUS });
+    }
+  };
+
+  const renderWeeklySummary = () => {
+    if (weeklySummary.length === 0) return null;
+
+    const weekStart = weeklySummary[0]?.date;
+    if (!weekStart) return null;
+
+    // Calculate totals
+    const totalMinutes = weeklySummary.reduce((sum, day) => sum + day.total_minutes, 0);
+    const totalSessions = weeklySummary.reduce((sum, day) => sum + day.session_count, 0);
+
+    return (
+      <div className="weekly-summary">
+        <div className="weekly-summary-card">
+          <h3>{t('presence.weeklySummary')} - {t('presence.weekOf')} {formatLocalizedWeekHeader(weekStart)}</h3>
+          <div className="weekly-table-container">
+            <table className="weekly-table">
+              <thead>
+                <tr>
+                  <th>{t('presence.dayName')}</th>
+                  <th>{t('presence.date')}</th>
+                  <th>{t('presence.totalTime')}</th>
+                  <th>{t('presence.sessions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weeklySummary.map((day, index) => (
+                  <tr 
+                    key={index} 
+                    className={`weekly-row ${day.is_today ? 'today-row' : ''} ${day.date === selectedDate ? 'selected-row' : ''}`}
+                    onClick={() => handleDateClick(day.date)}
+                    title={t('presence.clickToViewDay')}
+                  >
+                    <td className="day-name">{getLocalizedDayName(day.day_name)}</td>
+                    <td className="day-date">
+                      {formatLocalizedDate(day.date)}
+                      {day.is_today && <span className="today-badge">{t('presence.today')}</span>}
+                    </td>
+                    <td className="day-time">{formatDuration(day.total_minutes)}</td>
+                    <td className="day-sessions">{day.session_count}</td>
+                  </tr>
+                ))}
+                {/* Total row */}
+                <tr className="weekly-row total-row">
+                  <td className="day-name total-label">{t('presence.total')}</td>
+                  <td className="day-date">-</td>
+                  <td className="day-time total-time">{formatDuration(totalMinutes)}</td>
+                  <td className="day-sessions total-sessions">{totalSessions}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderCurrentStatus = () => {
     if (!isToday || !currentStatus.continuousScanning) return null;
@@ -245,6 +357,8 @@ const OfficePresenceView = ({ onRefresh }) => {
           <>
             {renderCurrentStatus()}
             
+            {renderWeeklySummary()}
+
             {summary && (
               <div className="presence-summary">
                 <div className="summary-card">
@@ -487,6 +601,117 @@ const OfficePresenceView = ({ onRefresh }) => {
 
         .presence-summary {
           margin: 1.5rem 0;
+        }
+
+        .weekly-summary {
+          margin: 1.5rem 0;
+        }
+
+        .weekly-summary-card {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 1.5rem;
+          border: 1px solid #dee2e6;
+        }
+
+        .weekly-summary-card h3 {
+          margin: 0 0 1rem 0;
+          color: #333;
+          font-size: 1.1rem;
+        }
+
+        .weekly-table-container {
+          overflow-x: auto;
+        }
+
+        .weekly-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 0.5rem;
+        }
+
+        .weekly-table th,
+        .weekly-table td {
+          padding: 0.75rem;
+          text-align: left;
+          border-bottom: 1px solid #dee2e6;
+        }
+
+        .weekly-table th {
+          background-color: #e9ecef;
+          font-weight: 600;
+          color: #495057;
+        }
+
+        .weekly-row {
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .weekly-row:hover {
+          background-color: #e3f2fd;
+        }
+
+        .weekly-row.today-row {
+          background-color: #fff3cd;
+        }
+
+        .weekly-row.selected-row {
+          background-color: #cce5ff;
+          font-weight: 600;
+        }
+
+        .weekly-row.total-row {
+          background-color: #e8f5e8;
+          border-top: 2px solid #28a745;
+          font-weight: 600;
+          cursor: default;
+        }
+
+        .weekly-row.total-row:hover {
+          background-color: #e8f5e8;
+        }
+
+        .total-label {
+          color: #28a745;
+          font-weight: 700;
+        }
+
+        .total-time {
+          color: #28a745;
+          font-weight: 700;
+        }
+
+        .total-sessions {
+          color: #28a745;
+          font-weight: 700;
+        }
+
+        .day-name {
+          font-weight: 500;
+        }
+
+        .day-date {
+          position: relative;
+        }
+
+        .today-badge {
+          margin-left: 0.5rem;
+          padding: 0.125rem 0.375rem;
+          background-color: #007bff;
+          color: white;
+          border-radius: 3px;
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        .day-time {
+          font-weight: 500;
+          color: #007bff;
+        }
+
+        .day-sessions {
+          color: #666;
         }
 
         .summary-card {

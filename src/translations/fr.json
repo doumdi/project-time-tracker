@@ -241,7 +241,19 @@
     "detectedDevices": "Appareils Détectés",
     "todayTotal": "Total Aujourd'hui",
     "currentSessionTime": "Temps de Session Actuelle",
-    "detectedFor": "Détecté depuis"
+    "detectedFor": "Détecté depuis",
+    "weeklySummary": "Résumé Hebdomadaire",
+    "weekOf": "Semaine du",
+    "dayName": "Jour",
+    "clickToViewDay": "Cliquez pour voir ce jour",
+    "total": "Total",
+    "monday": "Lundi",
+    "tuesday": "Mardi",
+    "wednesday": "Mercredi", 
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi",
+    "sunday": "Dimanche"
   },
   "reports": {
     "title": "Rapports",

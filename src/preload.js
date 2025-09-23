@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateOfficePresence: (presence) => ipcRenderer.invoke('update-office-presence', presence),
   deleteOfficePresence: (id) => ipcRenderer.invoke('delete-office-presence', id),
   getOfficePresenceSummary: (filters) => ipcRenderer.invoke('get-office-presence-summary', filters),
+  getOfficePresenceWeeklySummary: (referenceDate) => ipcRenderer.invoke('get-office-presence-weekly-summary', referenceDate),
   
   // Task operations
   getTasks: (filters) => ipcRenderer.invoke('get-tasks', filters),
