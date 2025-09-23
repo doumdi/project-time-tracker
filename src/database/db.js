@@ -702,6 +702,58 @@ function getOfficePresenceSummary(filters = {}) {
   });
 }
 
+function getOfficePresenceWeeklySummary(referenceDate = null) {
+  return new Promise((resolve, reject) => {
+    const baseDate = referenceDate || new Date().toISOString().split('T')[0];
+    
+    let sql = `
+      WITH week_dates AS (
+        SELECT 
+          date(?, '-' || (strftime('%w', ?) - 1) || ' days') as week_start,
+          date(?, '-' || (strftime('%w', ?) - 1) || ' days', '+6 days') as week_end
+      ),
+      all_week_days AS (
+        SELECT 
+          date(week_start, '+0 days') as date, 1 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+1 days') as date, 2 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+2 days') as date, 3 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+3 days') as date, 4 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+4 days') as date, 5 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+5 days') as date, 6 as day_order FROM week_dates
+        UNION ALL SELECT date(week_start, '+6 days') as date, 7 as day_order FROM week_dates
+      )
+      SELECT 
+        awd.date,
+        awd.day_order,
+        strftime('%w', awd.date) as day_of_week,
+        CASE strftime('%w', awd.date)
+          WHEN '0' THEN 'Sunday'
+          WHEN '1' THEN 'Monday'
+          WHEN '2' THEN 'Tuesday'
+          WHEN '3' THEN 'Wednesday'
+          WHEN '4' THEN 'Thursday'
+          WHEN '5' THEN 'Friday'
+          WHEN '6' THEN 'Saturday'
+        END as day_name,
+        COALESCE(SUM(op.duration), 0) as total_minutes,
+        COALESCE(COUNT(op.id), 0) as session_count,
+        awd.date = date('now') as is_today
+      FROM all_week_days awd
+      LEFT JOIN office_presence op ON date(op.date) = awd.date
+      GROUP BY awd.date, awd.day_order
+      ORDER BY awd.day_order
+    `;
+    
+    db.all(sql, [baseDate, baseDate, baseDate, baseDate], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
 // Task operations
 function getTasks(filters = {}) {
   return new Promise((resolve, reject) => {
@@ -892,6 +944,7 @@ module.exports = {
   updateOfficePresence,
   deleteOfficePresence,
   getOfficePresenceSummary,
+  getOfficePresenceWeeklySummary,
   getTasks,
   addTask,
   updateTask,

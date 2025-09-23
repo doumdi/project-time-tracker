@@ -333,6 +333,10 @@ ipcMain.handle('get-office-presence-summary', async (event, filters) => {
   return await database.getOfficePresenceSummary(filters);
 });
 
+ipcMain.handle('get-office-presence-weekly-summary', async (event, referenceDate) => {
+  return await database.getOfficePresenceWeeklySummary(referenceDate);
+});
+
 // Task IPC handlers
 ipcMain.handle('get-tasks', async (event, filters) => {
   return await database.getTasks(filters);
@@ -653,6 +657,9 @@ const mcpIpcInterface = {
           break;
         case 'get-office-presence-summary':
           result = await database.getOfficePresenceSummary(args[0]);
+          break;
+        case 'get-office-presence-weekly-summary':
+          result = await database.getOfficePresenceWeeklySummary(args[0]);
           break;
         default:
           throw new Error(`Unknown IPC channel: ${channel}`);
