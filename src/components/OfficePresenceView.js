@@ -43,8 +43,14 @@ const OfficePresenceView = ({ onRefresh }) => {
     // Refresh current status every 30 seconds
     const statusInterval = setInterval(loadCurrentStatus, 30000);
     
+    // Refresh presence data and weekly summary every minute
+    const dataRefreshInterval = setInterval(() => {
+      loadPresenceData();
+    }, 60000);
+    
     return () => {
       clearInterval(statusInterval);
+      clearInterval(dataRefreshInterval);
       if (window.electronAPI) {
         window.electronAPI.removeAllListeners('presence-status-updated');
         window.electronAPI.removeAllListeners('presence-data-updated');
@@ -184,7 +190,7 @@ const OfficePresenceView = ({ onRefresh }) => {
                   >
                     <td className="day-name">{day.day_name}</td>
                     <td className="day-date">
-                      {format(parseISO(day.date), 'MMM dd')}
+                      {format(parseISO(day.date), 'MMM d')}
                       {day.is_today && <span className="today-badge">{t('presence.today')}</span>}
                     </td>
                     <td className="day-time">{formatDuration(day.total_minutes)}</td>
