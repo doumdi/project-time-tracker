@@ -194,7 +194,9 @@
     "mcpServerPortDescription": "Port number for the MCP server (1024-65535). Default: 3001",
     "debug": "Debug",
     "enableBleLogs": "Enable BLE Debug Logs",
-    "bleLogsDescription": "Show detailed BLE scanning and device discovery logs in the console for debugging purposes."
+    "bleLogsDescription": "Show detailed BLE scanning and device discovery logs in the console for debugging purposes.",
+    "enablePresenceLogs": "Enable Presence Monitor Debug Logs",
+    "presenceLogsDescription": "Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes."
   },
   "common": {
     "save": "Save",

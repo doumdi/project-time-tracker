@@ -223,12 +223,20 @@ let bleState = {
   globalPresenceStartTime: null, // Track when global presence started
   presenceSaveTimer: null, // Timer for periodic presence saves
   presenceSaveInterval: 15 * 60 * 1000, // Default 15 minutes in milliseconds
-  debugLogsEnabled: false // Flag to control BLE debug logging
+  debugLogsEnabled: false, // Flag to control BLE debug logging
+  presenceLogsEnabled: false // Flag to control presence monitor debug logging
 };
 
 // Helper function for conditional BLE logging
 function bleLog(message, ...args) {
   if (bleState.debugLogsEnabled) {
+    console.log(message, ...args);
+  }
+}
+
+// Helper function for conditional presence monitor logging
+function presenceLog(message, ...args) {
+  if (bleState.presenceLogsEnabled) {
     console.log(message, ...args);
   }
 }
@@ -491,7 +499,7 @@ ipcMain.handle('enable-presence-monitoring', async (event, enabled) => {
 // Presence save interval management
 ipcMain.handle('set-presence-save-interval', async (event, intervalMinutes) => {
   bleState.presenceSaveInterval = intervalMinutes * 60 * 1000; // Convert to milliseconds
-  console.log(`[PRESENCE MONITOR] Set presence save interval to ${intervalMinutes} minutes`);
+  presenceLog(`[PRESENCE MONITOR] Set presence save interval to ${intervalMinutes} minutes`);
   
   // If monitoring is active, restart the save timer with new interval
   if (bleState.continuousScanning) {
@@ -513,6 +521,16 @@ ipcMain.handle('get-ble-logs-enabled', async () => {
 
 ipcMain.handle('set-ble-logs-enabled', async (event, enabled) => {
   bleState.debugLogsEnabled = enabled;
+  return { success: true };
+});
+
+// Presence monitor debug logs IPC handlers
+ipcMain.handle('get-presence-logs-enabled', async () => {
+  return bleState.presenceLogsEnabled;
+});
+
+ipcMain.handle('set-presence-logs-enabled', async (event, enabled) => {
+  bleState.presenceLogsEnabled = enabled;
   return { success: true };
 });
 
@@ -789,7 +807,7 @@ function stopBleScan() {
 
 function startContinuousScanning() {
   if (!noble || bleState.continuousScanning) {
-    console.log('[PRESENCE MONITOR] Cannot start continuous scanning - already active or noble not available');
+    presenceLog('[PRESENCE MONITOR] Cannot start continuous scanning - already active or noble not available');
     return;
   }
   
@@ -884,13 +902,13 @@ function stopContinuousScanning() {
   if (bleState.periodicScanTimer) {
     clearInterval(bleState.periodicScanTimer);
     bleState.periodicScanTimer = null;
-    console.log('[PRESENCE MONITOR] Cleared periodic scan timer');
+    presenceLog('[PRESENCE MONITOR] Cleared periodic scan timer');
   }
   
   if (bleState.isScanning) {
     noble.stopScanning();
     bleState.isScanning = false;
-    console.log('[PRESENCE MONITOR] Stopped active scan');
+    presenceLog('[PRESENCE MONITOR] Stopped active scan');
   }
   
   noble.removeAllListeners('discover');
@@ -898,7 +916,7 @@ function stopContinuousScanning() {
   bleState.lastDeviceDetection.clear();
   bleState.deviceDetectionStartTime.clear();
   bleState.globalPresenceStartTime = null;
-  console.log('[PRESENCE MONITOR] Cleared all presence tracking state');
+  presenceLog('[PRESENCE MONITOR] Cleared all presence tracking state');
 }
 
 async function handlePresenceDeviceDiscovery(peripheral) {
@@ -906,7 +924,7 @@ async function handlePresenceDeviceDiscovery(peripheral) {
   const currentTime = new Date();
   
   // Debug logging for presence monitoring
-  console.log(`[PRESENCE MONITOR] Discovered device: ${peripheral.advertisement.localName || 'Unknown'} (${deviceMac}) RSSI: ${peripheral.rssi}dBm`);
+  presenceLog(`[PRESENCE MONITOR] Discovered device: ${peripheral.advertisement.localName || 'Unknown'} (${deviceMac}) RSSI: ${peripheral.rssi}dBm`);
   
   // Get enabled devices from database
   const enabledDevices = await database.getBleDevices();
@@ -917,18 +935,18 @@ async function handlePresenceDeviceDiscovery(peripheral) {
   if (monitoredDevices.length > 0) {
     const device = monitoredDevices[0];
     
-    console.log(`[PRESENCE MONITOR] Matched monitored device: ${device.name} (${deviceMac})`);
+    presenceLog(`[PRESENCE MONITOR] Matched monitored device: ${device.name} (${deviceMac})`);
     
     // Track device detection start time
     if (!bleState.deviceDetectionStartTime.has(deviceMac)) {
       bleState.deviceDetectionStartTime.set(deviceMac, currentTime);
-      console.log(`[PRESENCE MONITOR] Started tracking device: ${device.name}`);
+      presenceLog(`[PRESENCE MONITOR] Started tracking device: ${device.name}`);
     }
     
     // Track global presence start time
     if (!bleState.globalPresenceStartTime) {
       bleState.globalPresenceStartTime = currentTime;
-      console.log(`[PRESENCE MONITOR] Started global presence session`);
+      presenceLog(`[PRESENCE MONITOR] Started global presence session`);
     }
     
     // Update current detected devices
@@ -1017,7 +1035,7 @@ function startPresenceSaveTimer() {
     clearInterval(bleState.presenceSaveTimer);
   }
   
-  console.log(`[PRESENCE MONITOR] Starting periodic save timer (${bleState.presenceSaveInterval / 60000} minutes)`);
+  presenceLog(`[PRESENCE MONITOR] Starting periodic save timer (${bleState.presenceSaveInterval / 60000} minutes)`);
   
   bleState.presenceSaveTimer = setInterval(async () => {
     await saveCurrentPresenceSession();
@@ -1028,16 +1046,16 @@ function stopPresenceSaveTimer() {
   if (bleState.presenceSaveTimer) {
     clearInterval(bleState.presenceSaveTimer);
     bleState.presenceSaveTimer = null;
-    console.log('[PRESENCE MONITOR] Stopped periodic save timer');
+    presenceLog('[PRESENCE MONITOR] Stopped periodic save timer');
   }
 }
 
 async function saveCurrentPresenceSession() {
-  console.log('[PRESENCE MONITOR] Periodic save triggered');
+  presenceLog('[PRESENCE MONITOR] Periodic save triggered');
   
   // If we have an active session and devices are still detected, save and start new session
   if (bleState.activePresenceSession && bleState.currentDetectedDevices.size > 0) {
-    console.log('[PRESENCE MONITOR] Saving current session and starting new one');
+    presenceLog('[PRESENCE MONITOR] Saving current session and starting new one');
     
     // Save the current session
     await endPresenceSession();
@@ -1065,7 +1083,7 @@ async function saveCurrentPresenceSession() {
         // Reset global presence start time for the new session
         bleState.globalPresenceStartTime = currentTime;
         
-        console.log('[PRESENCE MONITOR] Started new presence session after save');
+        presenceLog('[PRESENCE MONITOR] Started new presence session after save');
         
         // Notify renderer of new session
         if (mainWindow) {
@@ -1080,7 +1098,7 @@ async function checkDeviceTimeouts() {
   const currentTime = new Date();
   const timeoutThreshold = 2 * 60 * 1000; // 2 minutes timeout
   
-  console.log(`[PRESENCE MONITOR] Checking device timeouts for ${bleState.currentDetectedDevices.size} devices`);
+  presenceLog(`[PRESENCE MONITOR] Checking device timeouts for ${bleState.currentDetectedDevices.size} devices`);
   
   // Check which devices haven't been seen recently
   for (const [deviceMac, lastSeen] of bleState.lastDeviceDetection) {
@@ -1090,13 +1108,13 @@ async function checkDeviceTimeouts() {
       bleState.lastDeviceDetection.delete(deviceMac);
       bleState.deviceDetectionStartTime.delete(deviceMac);
       
-      console.log(`[PRESENCE MONITOR] Device timeout: ${deviceMac}`);
+      presenceLog(`[PRESENCE MONITOR] Device timeout: ${deviceMac}`);
     }
   }
   
   // If no devices are detected and we have an active session, end it
   if (bleState.currentDetectedDevices.size === 0 && bleState.activePresenceSession) {
-    console.log('[PRESENCE MONITOR] No devices detected, ending presence session');
+    presenceLog('[PRESENCE MONITOR] No devices detected, ending presence session');
     // Reset global presence start time
     bleState.globalPresenceStartTime = null;
     

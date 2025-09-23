@@ -23,6 +23,7 @@ const Settings = () => {
   const [mcpServerEnabled, setMcpServerEnabled] = useState(false);
   const [mcpServerPort, setMcpServerPort] = useState(3001);
   const [bleLogsEnabled, setBleLogsEnabled] = useState(false);
+  const [presenceLogsEnabled, setPresenceLogsEnabled] = useState(false);
 
   // Load version information
   useEffect(() => {
@@ -182,6 +183,26 @@ const Settings = () => {
     }
   };
 
+  const handlePresenceLogsToggle = async (e) => {
+    const enabled = e.target.checked;
+    setPresenceLogsEnabled(enabled);
+    
+    // Store in localStorage
+    localStorage.setItem('presenceLogsEnabled', enabled.toString());
+    
+    // Enable/disable presence logs via IPC
+    try {
+      await window.electronAPI.setPresenceLogsEnabled(enabled);
+      alert(t('settings.settingsSaved'));
+    } catch (error) {
+      console.error('Failed to toggle presence logs:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+      // Revert the toggle state
+      setPresenceLogsEnabled(!enabled);
+      localStorage.setItem('presenceLogsEnabled', (!enabled).toString());
+    }
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -244,6 +265,20 @@ const Settings = () => {
           await window.electronAPI.setBleLogsEnabled(bleLogsEnabled);
         } catch (error) {
           console.error('[Settings] Failed to sync BLE logs state:', error);
+        }
+      }
+      
+      // Load presence logs setting
+      const storedPresenceLogsEnabled = localStorage.getItem('presenceLogsEnabled');
+      const presenceLogsEnabled = storedPresenceLogsEnabled === 'true';
+      setPresenceLogsEnabled(presenceLogsEnabled);
+      
+      // Sync presence logs state with main process
+      if (window.electronAPI) {
+        try {
+          await window.electronAPI.setPresenceLogsEnabled(presenceLogsEnabled);
+        } catch (error) {
+          console.error('[Settings] Failed to sync presence logs state:', error);
         }
       }
       
@@ -463,6 +498,21 @@ const Settings = () => {
                 </label>
                 <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
                   {t('settings.bleLogsDescription') || 'Show detailed BLE scanning and device discovery logs in the console for debugging purposes.'}
+                </small>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={presenceLogsEnabled}
+                    onChange={handlePresenceLogsToggle}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  {t('settings.enablePresenceLogs') || 'Enable Presence Monitor Debug Logs'}
+                </label>
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.presenceLogsDescription') || 'Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes.'}
                 </small>
               </div>
             </div>

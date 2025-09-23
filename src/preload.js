@@ -57,6 +57,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBleLogsEnabled: () => ipcRenderer.invoke('get-ble-logs-enabled'),
   setBleLogsEnabled: (enabled) => ipcRenderer.invoke('set-ble-logs-enabled', enabled),
   
+  // Presence monitor debug logs operations
+  getPresenceLogsEnabled: () => ipcRenderer.invoke('get-presence-logs-enabled'),
+  setPresenceLogsEnabled: (enabled) => ipcRenderer.invoke('set-presence-logs-enabled', enabled),
+  
   // Event listeners for BLE events
   onBleDeviceDiscovered: (callback) => ipcRenderer.on('ble-device-discovered', callback),
   onBleDevicesCleared: (callback) => ipcRenderer.on('ble-devices-cleared', callback),
