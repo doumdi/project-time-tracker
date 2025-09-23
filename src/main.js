@@ -222,8 +222,16 @@ let bleState = {
   deviceDetectionStartTime: new Map(), // Track when each device was first detected
   globalPresenceStartTime: null, // Track when global presence started
   presenceSaveTimer: null, // Timer for periodic presence saves
-  presenceSaveInterval: 15 * 60 * 1000 // Default 15 minutes in milliseconds
+  presenceSaveInterval: 15 * 60 * 1000, // Default 15 minutes in milliseconds
+  debugLogsEnabled: false // Flag to control BLE debug logging
 };
+
+// Helper function for conditional BLE logging
+function bleLog(message, ...args) {
+  if (bleState.debugLogsEnabled) {
+    console.log(message, ...args);
+  }
+}
 
 // MCP server state
 let mcpServerState = {
@@ -385,7 +393,7 @@ ipcMain.handle('trigger-immediate-scan', async () => {
   }
   
   if (noble.state === 'poweredOn') {
-    console.log('[BLE SCAN] Triggering immediate BLE scan from settings...');
+    bleLog('[BLE SCAN] Triggering immediate BLE scan from settings...');
     
     // Clear discovered devices for fresh results
     bleState.discoveredDevices.clear();
@@ -398,7 +406,7 @@ ipcMain.handle('trigger-immediate-scan', async () => {
     // If continuous scanning is active, the device discovery events are already handled
     // Just need to ensure we clear the discovered devices list for fresh results
     if (bleState.continuousScanning) {
-      console.log('[BLE SCAN] Continuous scanning active, cleared device list for fresh discovery');
+      bleLog('[BLE SCAN] Continuous scanning active, cleared device list for fresh discovery');
       // The continuous scanning discover handler will automatically populate new devices
     } else {
       // Start a standalone scan if continuous scanning is not active
@@ -496,6 +504,16 @@ ipcMain.handle('set-presence-save-interval', async (event, intervalMinutes) => {
 
 ipcMain.handle('get-presence-save-interval', async () => {
   return Math.floor(bleState.presenceSaveInterval / (60 * 1000)); // Return in minutes
+});
+
+// BLE debug logs IPC handlers
+ipcMain.handle('get-ble-logs-enabled', async () => {
+  return bleState.debugLogsEnabled;
+});
+
+ipcMain.handle('set-ble-logs-enabled', async (event, enabled) => {
+  bleState.debugLogsEnabled = enabled;
+  return { success: true };
 });
 
 // MCP server IPC handlers
@@ -706,11 +724,11 @@ async function stopMcpServer() {
 // BLE scanning functions
 function startBleScan() {
   if (!noble || bleState.isScanning) {
-    console.log('[BLE SCAN] Cannot start scan - noble not available or already scanning');
+    bleLog('[BLE SCAN] Cannot start scan - noble not available or already scanning');
     return;
   }
   
-  console.log('[BLE SCAN] Starting BLE device scan...');
+  bleLog('[BLE SCAN] Starting BLE device scan...');
   bleState.isScanning = true;
   bleState.discoveredDevices.clear();
   
@@ -733,13 +751,13 @@ function startBleScan() {
     };
     
     // Debug logging
-    console.log(`[BLE SCAN] Discovered device: ${device.name} (${device.mac_address}) RSSI: ${device.rssi}dBm`);
+    bleLog(`[BLE SCAN] Discovered device: ${device.name} (${device.mac_address}) RSSI: ${device.rssi}dBm`);
     
     bleState.discoveredDevices.set(peripheral.id, device);
     
     // Send real-time update to renderer immediately
     if (mainWindow) {
-      console.log('[BLE SCAN] Sending real-time device update to frontend');
+      bleLog('[BLE SCAN] Sending real-time device update to frontend');
       mainWindow.webContents.send('ble-device-discovered', device);
     }
   });
@@ -760,7 +778,7 @@ function startBleScan() {
 function stopBleScan() {
   if (!noble || !bleState.isScanning) return;
   
-  console.log('[BLE SCAN] Stopping BLE device scan');
+  bleLog('[BLE SCAN] Stopping BLE device scan');
   noble.stopScanning();
   bleState.isScanning = false;
   
@@ -775,7 +793,7 @@ function startContinuousScanning() {
     return;
   }
   
-  console.log('[PRESENCE MONITOR] Starting continuous BLE scanning (every minute)');
+  bleLog('[PRESENCE MONITOR] Starting continuous BLE scanning (every minute)');
   bleState.continuousScanning = true;
   
   // Handle both presence monitoring and real-time device discovery
@@ -798,7 +816,7 @@ function startContinuousScanning() {
     
     // Send real-time update to renderer for BLE settings
     if (mainWindow) {
-      console.log('[BLE SCAN] Sending continuous scan device to frontend:', device.name, device.mac_address);
+      bleLog('[BLE SCAN] Sending continuous scan device to frontend:', device.name, device.mac_address);
       mainWindow.webContents.send('ble-device-discovered', device);
     }
   });
@@ -806,7 +824,7 @@ function startContinuousScanning() {
   // Start periodic scanning every minute instead of continuous scanning
   bleState.periodicScanTimer = setInterval(() => {
     if (noble.state === 'poweredOn') {
-      console.log('[PRESENCE MONITOR] Starting periodic BLE scan cycle...');
+      bleLog('[PRESENCE MONITOR] Starting periodic BLE scan cycle...');
       noble.startScanning([], false);
       bleState.isScanning = true;
       
@@ -815,17 +833,17 @@ function startContinuousScanning() {
         if (bleState.isScanning && noble.state === 'poweredOn') {
           noble.stopScanning();
           bleState.isScanning = false;
-          console.log('[PRESENCE MONITOR] Completed periodic BLE scan cycle');
+          bleLog('[PRESENCE MONITOR] Completed periodic BLE scan cycle');
         }
       }, 30000); // Scan for 30 seconds each minute
     } else {
-      console.log('[PRESENCE MONITOR] BLE not powered on, skipping scan cycle');
+      bleLog('[PRESENCE MONITOR] BLE not powered on, skipping scan cycle');
     }
   }, 60000); // Every minute
   
   // Start the first scan immediately
   if (noble.state === 'poweredOn') {
-    console.log('[PRESENCE MONITOR] Starting initial BLE scan...');
+    bleLog('[PRESENCE MONITOR] Starting initial BLE scan...');
     noble.startScanning([], false);
     bleState.isScanning = true;
     
@@ -833,14 +851,14 @@ function startContinuousScanning() {
       if (bleState.isScanning && noble.state === 'poweredOn') {
         noble.stopScanning();
         bleState.isScanning = false;
-        console.log('[PRESENCE MONITOR] Completed initial BLE scan');
+        bleLog('[PRESENCE MONITOR] Completed initial BLE scan');
       }
     }, 30000);
   } else {
-    console.log('[PRESENCE MONITOR] BLE not powered on, waiting for state change');
+    bleLog('[PRESENCE MONITOR] BLE not powered on, waiting for state change');
     noble.on('stateChange', (state) => {
       if (state === 'poweredOn' && bleState.continuousScanning && !bleState.isScanning) {
-        console.log('[PRESENCE MONITOR] BLE powered on, starting scan');
+        bleLog('[PRESENCE MONITOR] BLE powered on, starting scan');
         noble.startScanning([], false);
         bleState.isScanning = true;
         
@@ -848,7 +866,7 @@ function startContinuousScanning() {
           if (bleState.isScanning && noble.state === 'poweredOn') {
             noble.stopScanning();
             bleState.isScanning = false;
-            console.log('[PRESENCE MONITOR] Completed state change scan');
+            bleLog('[PRESENCE MONITOR] Completed state change scan');
           }
         }, 30000);
       }
@@ -859,7 +877,7 @@ function startContinuousScanning() {
 function stopContinuousScanning() {
   if (!noble) return;
   
-  console.log('[PRESENCE MONITOR] Stopping continuous BLE scanning');
+  bleLog('[PRESENCE MONITOR] Stopping continuous BLE scanning');
   bleState.continuousScanning = false;
   
   // Clear the periodic scan timer

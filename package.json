@@ -1,6 +1,6 @@
 {
   "name": "project-time-tracker",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Simple time tracking per project",
   "main": "src/main.js",
   "homepage": "./",

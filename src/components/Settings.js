@@ -22,6 +22,7 @@ const Settings = () => {
   const [taskDisplayCount, setTaskDisplayCount] = useState(5); // Default 5 tasks
   const [mcpServerEnabled, setMcpServerEnabled] = useState(false);
   const [mcpServerPort, setMcpServerPort] = useState(3001);
+  const [bleLogsEnabled, setBleLogsEnabled] = useState(false);
 
   // Load version information
   useEffect(() => {
@@ -161,6 +162,26 @@ const Settings = () => {
     }
   };
 
+  const handleBleLogsToggle = async (e) => {
+    const enabled = e.target.checked;
+    setBleLogsEnabled(enabled);
+    
+    // Store in localStorage
+    localStorage.setItem('bleLogsEnabled', enabled.toString());
+    
+    // Enable/disable BLE logs via IPC
+    try {
+      await window.electronAPI.setBleLogsEnabled(enabled);
+      alert(t('settings.settingsSaved'));
+    } catch (error) {
+      console.error('Failed to toggle BLE logs:', error);
+      alert(t('settings.errorSaving') || 'Error saving settings');
+      // Revert the toggle state
+      setBleLogsEnabled(!enabled);
+      localStorage.setItem('bleLogsEnabled', (!enabled).toString());
+    }
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -209,6 +230,20 @@ const Settings = () => {
           }
         } catch (error) {
           console.error('[Settings] Failed to get MCP server status:', error);
+        }
+      }
+      
+      // Load BLE logs setting
+      const storedBleLogsEnabled = localStorage.getItem('bleLogsEnabled');
+      const bleLogsEnabled = storedBleLogsEnabled === 'true';
+      setBleLogsEnabled(bleLogsEnabled);
+      
+      // Sync BLE logs state with main process
+      if (window.electronAPI) {
+        try {
+          await window.electronAPI.setBleLogsEnabled(bleLogsEnabled);
+        } catch (error) {
+          console.error('[Settings] Failed to sync BLE logs state:', error);
         }
       }
       
@@ -408,6 +443,28 @@ const Settings = () => {
                   <strong>Server URL:</strong> http://localhost:{mcpServerPort}/mcp
                 </div>
               )}
+            </div>
+
+            {/* Debug Settings */}
+            <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#fff5f5', borderRadius: '8px', border: '1px solid #fed7d7' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#333' }}>
+                {t('settings.debug') || 'Debug'}
+              </h3>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={bleLogsEnabled}
+                    onChange={handleBleLogsToggle}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  {t('settings.enableBleLogs') || 'Enable BLE Debug Logs'}
+                </label>
+                <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
+                  {t('settings.bleLogsDescription') || 'Show detailed BLE scanning and device discovery logs in the console for debugging purposes.'}
+                </small>
+              </div>
             </div>
 
             <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px' }}>
