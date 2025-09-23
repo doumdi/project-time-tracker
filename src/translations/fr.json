@@ -191,7 +191,12 @@
     "enableMcpServer": "Activer le Serveur MCP",
     "mcpServerDescription": "Exposer toutes les fonctionnalités de l'application via le serveur Model Context Protocol (MCP) pour les systèmes IA. Le serveur écoute sur un port HTTP localhost lorsqu'il est activé.",
     "mcpServerPort": "Port du Serveur MCP",
-    "mcpServerPortDescription": "Numéro de port pour le serveur MCP (1024-65535). Par défaut : 3001"
+    "mcpServerPortDescription": "Numéro de port pour le serveur MCP (1024-65535). Par défaut : 3001",
+    "debug": "Débogage",
+    "enableBleLogs": "Activer les Logs de Débogage BLE",
+    "bleLogsDescription": "Afficher les logs détaillés de scan BLE et de découverte d'appareils dans la console à des fins de débogage.",
+    "enablePresenceLogs": "Activer les Logs de Débogage du Moniteur de Présence",
+    "presenceLogsDescription": "Afficher les logs détaillés de surveillance de présence, de suivi d'appareils et de gestion de sessions dans la console à des fins de débogage."
   },
   "common": {
     "save": "Enregistrer",
