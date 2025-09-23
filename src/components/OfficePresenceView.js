@@ -176,27 +176,30 @@ const OfficePresenceView = ({ onRefresh }) => {
 
   const formatLocalizedDate = (dateString) => {
     const date = parseISO(dateString);
-    const locale = currentLanguage === 'fr' ? fr : enUS;
     
     if (currentLanguage === 'fr') {
-      // French format: "22 sept." 
-      return format(date, 'd MMM', { locale });
+      // French format: "22 sept." - Manual formatting to avoid locale issues
+      const day = format(date, 'd');
+      const month = format(date, 'MMM', { locale: fr }).toLowerCase();
+      return `${day} ${month}.`;
     } else {
       // English format: "Sep 22"
-      return format(date, 'MMM d', { locale });
+      return format(date, 'MMM d', { locale: enUS });
     }
   };
 
   const formatLocalizedWeekHeader = (dateString) => {
     const date = parseISO(dateString);
-    const locale = currentLanguage === 'fr' ? fr : enUS;
     
     if (currentLanguage === 'fr') {
-      // French format: "22 septembre 2025"
-      return format(date, 'd MMMM yyyy', { locale });
+      // French format: "22 septembre 2025" - Manual formatting for consistency
+      const day = format(date, 'd');
+      const month = format(date, 'MMMM', { locale: fr });
+      const year = format(date, 'yyyy');
+      return `${day} ${month} ${year}`;
     } else {
       // English format: "Sep 22, 2025"
-      return format(date, 'MMM dd, yyyy', { locale });
+      return format(date, 'MMM dd, yyyy', { locale: enUS });
     }
   };
 
