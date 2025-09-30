@@ -142,6 +142,16 @@ const TASK_DESCRIPTIONS = [
   'Integration testing'
 ];
 
+const SUBTASK_DESCRIPTIONS = [
+  'Research best practices',
+  'Create initial implementation',
+  'Write tests',
+  'Update documentation',
+  'Code review',
+  'Fix issues',
+  'Deploy changes'
+];
+
 /**
  * Generate random time entries for a given date
  */
@@ -275,6 +285,25 @@ async function populateDemoData() {
     }
     console.log(`[DEMO MODE]   ✓ Created ${tasks.length} tasks`);
     
+    // 3b. Create subtasks for tasks
+    console.log('[DEMO MODE] Creating subtasks...');
+    let subtaskCount = 0;
+    for (const task of tasks.slice(0, 3)) { // Add subtasks to first 3 tasks
+      const numSubtasks = 2 + Math.floor(Math.random() * 3); // 2-4 subtasks per task
+      for (let i = 0; i < numSubtasks; i++) {
+        const subtaskDesc = SUBTASK_DESCRIPTIONS[Math.floor(Math.random() * SUBTASK_DESCRIPTIONS.length)];
+        const isCompleted = Math.random() > 0.5; // 50% chance of being completed
+        
+        await database.addSubTask({
+          name: subtaskDesc,
+          parent_task_id: task.id,
+          is_completed: isCompleted
+        });
+        subtaskCount++;
+      }
+    }
+    console.log(`[DEMO MODE]   ✓ Created ${subtaskCount} subtasks`);
+    
     // 4. Generate time entries for last 3 months
     console.log('[DEMO MODE] Generating time entries...');
     const endDate = new Date();
@@ -307,6 +336,7 @@ async function populateDemoData() {
     console.log('[DEMO MODE] Summary:');
     console.log(`[DEMO MODE]   • ${projects.length} projects`);
     console.log(`[DEMO MODE]   • ${tasks.length} tasks`);
+    console.log(`[DEMO MODE]   • ${subtaskCount} subtasks`);
     console.log(`[DEMO MODE]   • ${devices.length} BLE devices`);
     console.log(`[DEMO MODE]   • ${totalEntries} time entries`);
     console.log(`[DEMO MODE]   • ${Math.round(totalMinutes / 60)} hours logged`);

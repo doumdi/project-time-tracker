@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 5;
+const CURRENT_DB_VERSION = 6;
 
 // Demo mode flag - set by setDemoMode() function
 let isDemoMode = false;
@@ -197,8 +197,20 @@ function createTables() {
       )
     `;
     
-    // Tasks table (from v5 migration)
-    const createTasksTable = `
+    // Tasks table (from v5 migration, updated in v6)
+    const createTasksTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        due_date DATE,
+        project_id INTEGER NOT NULL,
+        allocated_time INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -209,6 +221,19 @@ function createTables() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+      )
+    `;
+    
+    // Subtasks table (from v6 migration)
+    const createSubtasksTable = `
+      CREATE TABLE IF NOT EXISTS subtasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        parent_task_id INTEGER NOT NULL,
+        is_completed BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
       )
     `;
 
@@ -258,6 +283,14 @@ function createTables() {
       db.run(createTasksTable, (err) => {
         if (err) {
           console.error('Error creating tasks table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createSubtasksTable, (err) => {
+        if (err) {
+          console.error('Error creating subtasks table:', err);
           reject(err);
           return;
         }
@@ -924,11 +957,17 @@ function getTasks(filters = {}) {
 
 function addTask(task) {
   return new Promise((resolve, reject) => {
+    // Validate that project_id is provided (mandatory as of v6)
+    if (!task.project_id) {
+      reject(new Error('project_id is required for creating a task'));
+      return;
+    }
+    
     const sql = 'INSERT INTO tasks (name, due_date, project_id, allocated_time) VALUES (?, ?, ?, ?)';
     const params = [
       task.name,
       task.due_date || null,
-      task.project_id || null,
+      task.project_id,
       task.allocated_time || 0
     ];
     
@@ -944,11 +983,17 @@ function addTask(task) {
 
 function updateTask(task) {
   return new Promise((resolve, reject) => {
+    // Validate that project_id is provided (mandatory as of v6)
+    if (!task.project_id) {
+      reject(new Error('project_id is required for updating a task'));
+      return;
+    }
+    
     const sql = 'UPDATE tasks SET name = ?, due_date = ?, project_id = ?, allocated_time = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     const params = [
       task.name,
       task.due_date || null,
-      task.project_id || null,
+      task.project_id,
       task.allocated_time || 0,
       task.is_active ? 1 : 0,
       task.id
@@ -967,6 +1012,91 @@ function updateTask(task) {
 function deleteTask(id) {
   return new Promise((resolve, reject) => {
     const sql = 'DELETE FROM tasks WHERE id = ?';
+    
+    db.run(sql, [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ deleted: this.changes > 0 });
+      }
+    });
+  });
+}
+
+// Subtask operations
+function getSubTasks(parentTaskId) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT * FROM subtasks 
+      WHERE parent_task_id = ?
+      ORDER BY created_at ASC
+    `;
+    
+    db.all(sql, [parentTaskId], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows.map(row => ({
+          ...row,
+          is_completed: Boolean(row.is_completed)
+        })));
+      }
+    });
+  });
+}
+
+function addSubTask(subTask) {
+  return new Promise((resolve, reject) => {
+    // Validate that parent_task_id is provided
+    if (!subTask.parent_task_id) {
+      reject(new Error('parent_task_id is required for creating a subtask'));
+      return;
+    }
+    
+    const sql = 'INSERT INTO subtasks (name, parent_task_id, is_completed) VALUES (?, ?, ?)';
+    const params = [
+      subTask.name,
+      subTask.parent_task_id,
+      subTask.is_completed ? 1 : 0
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ 
+          id: this.lastID, 
+          name: subTask.name,
+          parent_task_id: subTask.parent_task_id,
+          is_completed: Boolean(subTask.is_completed)
+        });
+      }
+    });
+  });
+}
+
+function updateSubTask(subTask) {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE subtasks SET name = ?, is_completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      subTask.name,
+      subTask.is_completed ? 1 : 0,
+      subTask.id
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(subTask);
+      }
+    });
+  });
+}
+
+function deleteSubTask(id) {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM subtasks WHERE id = ?';
     
     db.run(sql, [id], function(err) {
       if (err) {
@@ -1065,5 +1195,9 @@ module.exports = {
   updateTask,
   deleteTask,
   setActiveTask,
-  getActiveTask
+  getActiveTask,
+  getSubTasks,
+  addSubTask,
+  updateSubTask,
+  deleteSubTask
 };
