@@ -117,7 +117,20 @@ function createTables() {
       )
     `;
 
-    const createProjectsTable = `
+    // In demo mode, include all columns that migrations would add
+    const createProjectsTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        color TEXT DEFAULT '#4CAF50',
+        budget DECIMAL(10,2) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -128,17 +141,74 @@ function createTables() {
       )
     `;
 
-    const createTimeEntriesTable = `
+    const createTimeEntriesTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS time_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        task_id INTEGER,
+        description TEXT,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS time_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
         description TEXT,
         start_time DATETIME NOT NULL,
         end_time DATETIME,
-        duration INTEGER, -- Duration in minutes
+        duration INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    `;
+    
+    // BLE devices table (from v4 migration)
+    const createBleDevicesTable = `
+      CREATE TABLE IF NOT EXISTS ble_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        mac_address TEXT UNIQUE NOT NULL,
+        device_type TEXT DEFAULT 'unknown',
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    // Office presence table (from v4 migration)
+    const createOfficePresenceTable = `
+      CREATE TABLE IF NOT EXISTS office_presence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATE NOT NULL,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER NOT NULL,
+        device_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
+      )
+    `;
+    
+    // Tasks table (from v5 migration)
+    const createTasksTable = `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        due_date DATE,
+        project_id INTEGER,
+        allocated_time INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
       )
     `;
 
@@ -163,6 +233,31 @@ function createTables() {
       db.run(createTimeEntriesTable, (err) => {
         if (err) {
           console.error('Error creating time_entries table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      // Create BLE and task tables (needed for demo mode and v4/v5 migrations)
+      db.run(createBleDevicesTable, (err) => {
+        if (err) {
+          console.error('Error creating ble_devices table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createOfficePresenceTable, (err) => {
+        if (err) {
+          console.error('Error creating office_presence table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createTasksTable, (err) => {
+        if (err) {
+          console.error('Error creating tasks table:', err);
           reject(err);
           return;
         }
