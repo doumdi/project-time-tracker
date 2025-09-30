@@ -9,6 +9,7 @@
     "build": "webpack --mode production",
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=1 electron .",
+    "electron-demo": "electron . --demo_mode",
     "update-version": "node scripts/update-version.js",
     "predist": "npm run update-version",
     "dist": "electron-builder",
@@ -22,7 +23,8 @@
     "test:integration": "node tests/comprehensive-timer-tests.js",
     "test:timer": "node tests/timer-tests.js",
     "test:sync": "node tests/timer-sync-tests.js",
-    "test:mcp": "node tests/test-http-mcp-server.js"
+    "test:mcp": "node tests/test-http-mcp-server.js",
+    "test:demo": "node tests/test-demo-mode.js"
   },
   "build": {
     "appId": "com.doumdi.project-time-tracker",

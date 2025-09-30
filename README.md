@@ -122,6 +122,11 @@ Try the application with pre-populated demo data without affecting your real dat
 npm run build
 
 # Start in demo mode
+npm run electron-demo
+```
+
+Or manually:
+```bash
 npm run electron -- --demo_mode
 ```
 
