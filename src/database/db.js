@@ -16,12 +16,15 @@ try {
 // Current database version - increment this when schema changes
 const CURRENT_DB_VERSION = 5;
 
+// Demo mode flag - set by setDemoMode() function
+let isDemoMode = false;
+
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
 const dbPath = path.join(userDataPath, 'timetracker.db');
 
-// Ensure data directory exists
-if (!fs.existsSync(userDataPath)) {
+// Ensure data directory exists (skip in demo mode)
+if (!isDemoMode && !fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath, { recursive: true });
 }
 
@@ -58,6 +61,14 @@ function closeDatabase() {
   });
 }
 
+// Set demo mode - must be called before initDatabase
+function setDemoMode(enabled) {
+  isDemoMode = enabled;
+  if (enabled) {
+    console.log('[DEMO MODE] Database will use in-memory storage');
+  }
+}
+
 // Initialize database
 function initDatabase() {
   if (isInitialized) {
@@ -65,17 +76,24 @@ function initDatabase() {
   }
   
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, async (err) => {
+    // Use in-memory database for demo mode, file-based for normal mode
+    const databasePath = isDemoMode ? ':memory:' : dbPath;
+    const modeLabel = isDemoMode ? 'in-memory (DEMO MODE)' : `file at ${dbPath}`;
+    
+    db = new sqlite3.Database(databasePath, async (err) => {
       if (err) {
         console.error('Error opening database:', err);
         reject(err);
       } else {
-        console.log('Connected to SQLite database at:', dbPath);
+        console.log(`Connected to SQLite database ${modeLabel}`);
         try {
           await createTables();
-          const upgradeOccurred = await runMigrations();
-          if (upgradeOccurred) {
-            console.log('Database has been upgraded to the latest version.');
+          // Skip migrations in demo mode (in-memory database starts fresh)
+          if (!isDemoMode) {
+            const upgradeOccurred = await runMigrations();
+            if (upgradeOccurred) {
+              console.log('Database has been upgraded to the latest version.');
+            }
           }
           isInitialized = true;
           resolve();
@@ -912,18 +930,20 @@ function getActiveTask() {
   });
 }
 
-// Initialize database when module is loaded
-if (app && app.isReady()) {
+// Initialize database when module is loaded (skip in demo mode, will be initialized manually)
+if (!isDemoMode && app && app.isReady()) {
   initDatabase();
-} else if (app) {
+} else if (!isDemoMode && app) {
   app.whenReady().then(initDatabase);
-} else {
+} else if (!isDemoMode) {
   // For testing or non-electron environments
   initDatabase();
 }
 
 module.exports = {
   initDatabase,
+  setDemoMode,
+  closeDatabase,
   getProjects,
   addProject,
   updateProject,
