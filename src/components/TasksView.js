@@ -157,6 +157,38 @@ const TasksView = ({ projects, onRefresh }) => {
     }
   };
 
+  const handleStartSubtask = async (subtask, task) => {
+    try {
+      // Check if task has a project for time tracking
+      if (!task.project_id) {
+        alert(t('tasks.selectProjectForTimeEntry'));
+        return;
+      }
+
+      // Set the parent task as active
+      await window.electronAPI.setActiveTask(task.id);
+      
+      // Save timer data to localStorage with task/subtask description
+      const timerData = {
+        isTracking: true,
+        startTime: Date.now(),
+        selectedProject: task.project_id,
+        description: `${task.name}/${subtask.name}`,
+        taskId: task.id,
+        subtaskId: subtask.id
+      };
+      localStorage.setItem('activeTimer', JSON.stringify(timerData));
+      
+      setActiveTask(task);
+      setActiveTaskStartTime(Date.now());
+      loadTasks();
+      alert(t('tasks.taskStarted'));
+    } catch (error) {
+      console.error('Error starting subtask:', error);
+      alert(t('tasks.errorStarting'));
+    }
+  };
+
   const handleStopTask = async () => {
     if (!activeTask || !activeTaskStartTime) return;
 
@@ -279,11 +311,56 @@ const TasksView = ({ projects, onRefresh }) => {
     }
   };
 
-  // Filter tasks based on search
+  // Filter tasks based on search - also includes subtasks matching the filter
   const filteredTasks = tasks.filter(task => {
     if (!searchFilter.trim()) return true;
-    return task.name.toLowerCase().includes(searchFilter.toLowerCase());
+    
+    const searchLower = searchFilter.toLowerCase();
+    
+    // Check if task name matches
+    if (task.name.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    
+    // Check if any subtask name matches
+    const taskSubtasks = subtasks[task.id] || [];
+    return taskSubtasks.some(subtask => 
+      subtask.name.toLowerCase().includes(searchLower)
+    );
   });
+
+  // Load and expand tasks when searching to show matching subtasks
+  useEffect(() => {
+    if (searchFilter.trim()) {
+      const searchLower = searchFilter.toLowerCase();
+      
+      // Load subtasks for all filtered tasks if not already loaded
+      filteredTasks.forEach(task => {
+        if (!subtasks[task.id]) {
+          loadSubtasks(task.id);
+        }
+      });
+      
+      // After a brief delay to allow subtasks to load, auto-expand tasks with matching subtasks
+      const timer = setTimeout(() => {
+        const tasksToExpand = new Set(expandedTasks);
+        
+        filteredTasks.forEach(task => {
+          // If task name doesn't match but the task is in filtered results, it has matching subtasks
+          if (!task.name.toLowerCase().includes(searchLower)) {
+            const taskSubtasks = subtasks[task.id] || [];
+            if (taskSubtasks.some(s => s.name.toLowerCase().includes(searchLower))) {
+              tasksToExpand.add(task.id);
+            }
+          }
+        });
+        
+        setExpandedTasks(tasksToExpand);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchFilter]);
 
   const getTaskStatus = (task) => {
     if (task.is_active) return 'active';
@@ -781,6 +858,19 @@ const TasksView = ({ projects, onRefresh }) => {
                                       }}>
                                         {subtask.name}
                                       </span>
+                                      {!task.is_active && (
+                                        <button
+                                          className="btn btn-small btn-success"
+                                          onClick={() => handleStartSubtask(subtask, task)}
+                                          disabled={activeTask !== null}
+                                          style={{
+                                            fontSize: '0.75rem',
+                                            padding: '0.3rem 0.6rem'
+                                          }}
+                                        >
+                                          ▶️ {t('tasks.startTask')}
+                                        </button>
+                                      )}
                                       <button
                                         className="btn btn-small btn-danger"
                                         onClick={() => handleDeleteSubtask(subtask.id, task.id)}
