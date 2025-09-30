@@ -62,6 +62,7 @@ Author(s) :
 - ✅ **Filtering & Search** - Filter time entries by project, date, and description
 - ✅ **Multiple Views** - Table view, calendar view (month/week/day), and charts
 - ✅ **Charts & Analytics** - Visual representations of time data
+- ✅ **Backup & Restore** - Export/import database to/from JSON files for easy backup and migration
 - ✅ **Local Database** - SQLite database that's easy to backup and move
 - ✅ **Internationalization** - English and French language support
 - ✅ **Modern UI** - Clean, responsive design with real-time updates
@@ -190,8 +191,14 @@ The window title will display "(DEMO MODE)" when running in demo mode. All data 
   - macOS: `~/Library/Application Support/project-time-tracker/timetracker.db`
   - Linux: `~/.config/project-time-tracker/timetracker.db`
 
-- **Backup**: Simply copy the database file to backup your data
-- **Restore**: Replace the database file to restore from backup
+- **Backup & Restore**: Use the built-in backup/restore feature in Settings
+  - **Backup**: Export your entire database to a JSON file (includes all projects, time entries, tasks, BLE devices, and settings)
+  - **Restore**: Import a previously exported JSON backup to restore your data
+  - **Manual Backup**: You can also copy the database file directly for backup
+  
+![Backup & Restore Feature](docs/screenshot-backup-restore.png)
+
+**Note**: Backup and restore work across different database versions, making it easy to migrate data between different versions of the application.
 
 ## Development
 
