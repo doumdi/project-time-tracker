@@ -128,7 +128,27 @@
     "onlyOneActiveTask": "Une seule tâche peut être active à la fois",
     "selectProjectForTimeEntry": "Veuillez sélectionner un projet pour cette tâche pour activer le suivi du temps",
     "noProject": "Aucun projet",
-    "taskNameRequired": "Veuillez entrer un nom de tâche"
+    "taskNameRequired": "Veuillez entrer un nom de tâche",
+    "searchTasks": "Rechercher des tâches...",
+    "filterByName": "Filtrer par nom",
+    "showingAllTasks": "Affichage de toutes les tâches et sous-tâches",
+    "subtasks": "Sous-tâches",
+    "addSubtask": "Ajouter une Sous-tâche",
+    "subtaskName": "Nom de la Sous-tâche",
+    "subtaskNamePlaceholder": "Que faut-il faire ?",
+    "completed": "Terminée",
+    "notCompleted": "Non terminée",
+    "markComplete": "Marquer comme terminée",
+    "markIncomplete": "Marquer comme non terminée",
+    "subtaskCreated": "Sous-tâche créée avec succès !",
+    "subtaskUpdated": "Sous-tâche mise à jour avec succès !",
+    "subtaskDeleted": "Sous-tâche supprimée avec succès !",
+    "confirmDeleteSubtask": "Êtes-vous sûr de vouloir supprimer cette sous-tâche ?",
+    "noSubtasks": "Aucune sous-tâche pour le moment",
+    "createFirstSubtask": "Décomposez cette tâche en étapes plus petites !",
+    "errorCreatingSubtask": "Erreur lors de la création de la sous-tâche",
+    "errorUpdatingSubtask": "Erreur lors de la mise à jour de la sous-tâche",
+    "errorDeletingSubtask": "Erreur lors de la suppression de la sous-tâche"
   },
   "calendar": {
     "title": "Calendrier",
@@ -216,7 +236,9 @@
     "back": "Retour",
     "unknown": "Inconnu",
     "status": "Statut",
-    "actions": "Actions"
+    "actions": "Actions",
+    "add": "Ajouter",
+    "results": "résultats"
   },
   "presence": {
     "title": "Présence Bureau",

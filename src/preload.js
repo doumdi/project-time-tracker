@@ -44,6 +44,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setActiveTask: (taskId) => ipcRenderer.invoke('set-active-task', taskId),
   getActiveTask: () => ipcRenderer.invoke('get-active-task'),
   
+  // Subtask operations
+  getSubTasks: (parentTaskId) => ipcRenderer.invoke('get-subtasks', parentTaskId),
+  addSubTask: (subtask) => ipcRenderer.invoke('add-subtask', subtask),
+  updateSubTask: (subtask) => ipcRenderer.invoke('update-subtask', subtask),
+  deleteSubTask: (id) => ipcRenderer.invoke('delete-subtask', id),
+  
   // BLE scanning operations
   startBleScan: () => ipcRenderer.invoke('start-ble-scan'),
   stopBleScan: () => ipcRenderer.invoke('stop-ble-scan'),

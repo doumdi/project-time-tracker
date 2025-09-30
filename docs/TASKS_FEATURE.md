@@ -4,21 +4,31 @@ The Task Management feature provides comprehensive task tracking with integrated
 
 ## Overview
 
-Tasks are discrete work units that can be optionally associated with projects. Each task can have:
+Tasks are discrete work units that must be associated with projects. Each task can have:
 - **Name**: Descriptive title of what needs to be done
 - **Due Date**: Optional deadline for task completion
-- **Project Association**: Link to a specific project for categorization and time tracking
+- **Project Association**: **Required** link to a specific project for categorization and time tracking
 - **Allocated Time**: Estimated time needed to complete the task (in minutes)
 - **Cumulated Time**: Actual time spent working on the task (automatically calculated)
+- **Subtasks**: Hierarchical breakdown of tasks into smaller actionable items
 
 ## Key Features
 
 ### 1. Task Creation and Management
 - Create tasks with an intuitive form interface
+- **Mandatory project association** for all tasks
 - Large, comfortable input fields for better usability
 - Two-column layout for efficient space usage
 - Edit existing tasks with pre-populated forms
 - Delete tasks with confirmation dialogs
+- **Subtask support** for breaking down complex tasks into smaller steps
+
+### 1a. Subtask Management
+- Create multiple subtasks for any parent task
+- Mark subtasks as completed/incomplete
+- Track overall task completion through subtask progress
+- Automatically deleted when parent task is deleted
+- Simple name-based subtask organization
 
 ### 2. Time Tracking Integration
 - **One-Click Start/Stop**: Start time tracking directly from the task list
@@ -52,19 +62,39 @@ Tasks have visual status indicators:
 
 ## Database Schema
 
+### Tasks Table (updated in v6)
 ```sql
 CREATE TABLE tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   due_date DATE,
-  project_id INTEGER,
+  project_id INTEGER NOT NULL,  -- Made mandatory in v6
   allocated_time INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+  FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 ```
+
+### Subtasks Table (added in v6)
+```sql
+CREATE TABLE subtasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  parent_task_id INTEGER NOT NULL,
+  is_completed BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
+);
+```
+
+**Key Changes in v6:**
+- `project_id` changed from `INTEGER` (nullable) to `INTEGER NOT NULL`
+- Foreign key changed from `ON DELETE SET NULL` to `ON DELETE CASCADE`
+- Added `subtasks` table with parent-child relationship
+- Existing tasks without projects are migrated to a default "Uncategorized" project
 
 ## User Interface
 
@@ -147,9 +177,11 @@ GROUP BY t.id, p.name, p.color
 
 ### Task Organization
 - Use descriptive task names that will be easily identifiable in time entries
-- Associate tasks with projects to enable time tracking
+- **All tasks must be associated with a project** (required as of v6)
 - Set realistic allocated time estimates for better progress tracking
 - Use due dates to prioritize work and identify overdue items
+- Break down complex tasks using subtasks for better organization
+- Mark subtasks as completed to track overall progress
 
 ### Time Tracking Workflow
 1. Create tasks with estimated time allocation
@@ -163,10 +195,12 @@ GROUP BY t.id, p.name, p.color
 
 Potential improvements for the task system:
 - Task templates for recurring work
-- Subtask support for complex tasks
+- ~~Subtask support for complex tasks~~ ✅ **Implemented in v6**
 - Task dependencies and scheduling
 - Time estimation accuracy tracking
 - Integration with external task management systems
 - Bulk task operations
 - Task filtering and search
 - Export task reports
+- Subtask time estimation and tracking
+- Nested subtasks (sub-subtasks)

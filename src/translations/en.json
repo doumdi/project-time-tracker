@@ -128,7 +128,27 @@
     "onlyOneActiveTask": "Only one task can be active at a time",
     "selectProjectForTimeEntry": "Please select a project for this task to enable time tracking",
     "noProject": "No project",
-    "taskNameRequired": "Please enter a task name"
+    "taskNameRequired": "Please enter a task name",
+    "searchTasks": "Search tasks...",
+    "filterByName": "Filter by name",
+    "showingAllTasks": "Showing all tasks and subtasks",
+    "subtasks": "Subtasks",
+    "addSubtask": "Add Subtask",
+    "subtaskName": "Subtask Name",
+    "subtaskNamePlaceholder": "What needs to be done?",
+    "completed": "Completed",
+    "notCompleted": "Not Completed",
+    "markComplete": "Mark Complete",
+    "markIncomplete": "Mark Incomplete",
+    "subtaskCreated": "Subtask created successfully!",
+    "subtaskUpdated": "Subtask updated successfully!",
+    "subtaskDeleted": "Subtask deleted successfully!",
+    "confirmDeleteSubtask": "Are you sure you want to delete this subtask?",
+    "noSubtasks": "No subtasks yet",
+    "createFirstSubtask": "Break down this task into smaller steps!",
+    "errorCreatingSubtask": "Error creating subtask",
+    "errorUpdatingSubtask": "Error updating subtask",
+    "errorDeletingSubtask": "Error deleting subtask"
   },
   "calendar": {
     "title": "Calendar",
@@ -216,7 +236,9 @@
     "back": "Back",
     "unknown": "Unknown",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "add": "Add",
+    "results": "results"
   },
   "presence": {
     "title": "Office Presence",
