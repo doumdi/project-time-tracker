@@ -191,12 +191,13 @@ The window title will display "(DEMO MODE)" when running in demo mode. All data 
   - macOS: `~/Library/Application Support/project-time-tracker/timetracker.db`
   - Linux: `~/.config/project-time-tracker/timetracker.db`
 
-- **Backup & Restore**: Use the built-in backup/restore feature in Settings
-  - **Backup**: Export your entire database to a JSON file (includes all projects, time entries, tasks, BLE devices, and settings)
-  - **Restore**: Import a previously exported JSON backup to restore your data
+- **Backup & Restore**: Use the built-in backup/restore feature in Settings with native file dialogs
+  - **Backup**: Export your entire database to a JSON file using native OS save dialog
+  - **Restore**: Import a previously exported JSON backup using native OS open dialog
+  - **Native File Dialogs**: Choose where to save backups and browse for restore files with familiar OS dialogs
   - **Manual Backup**: You can also copy the database file directly for backup
   
-![Backup & Restore Feature](docs/screenshot-backup-restore.png)
+![Backup & Restore Feature](docs/screenshot-backup-restore-with-dialogs.png)
 
 **Note**: Backup and restore work across different database versions, making it easy to migrate data between different versions of the application.
 

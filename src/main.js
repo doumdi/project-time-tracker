@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
 // Check for demo mode command line argument
@@ -336,6 +337,61 @@ ipcMain.handle('export-database', async () => {
 
 ipcMain.handle('import-database', async (event, backupData) => {
   return await database.importFromJSON(backupData);
+});
+
+// File dialog handlers for backup/restore
+ipcMain.handle('show-save-dialog-backup', async () => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save Database Backup',
+    defaultPath: `timetracker-backup-${new Date().toISOString().split('T')[0]}.json`,
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+    properties: ['createDirectory', 'showOverwriteConfirmation']
+  });
+  
+  if (!result.canceled && result.filePath) {
+    try {
+      // Get the backup data
+      const backupData = await database.exportToJSON();
+      // Write to the selected file
+      fs.writeFileSync(result.filePath, JSON.stringify(backupData, null, 2), 'utf8');
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      console.error('Error saving backup:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  
+  return { success: false, canceled: true };
+});
+
+ipcMain.handle('show-open-dialog-restore', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Database Backup to Restore',
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+    properties: ['openFile']
+  });
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    try {
+      // Read the backup file
+      const fileContent = fs.readFileSync(result.filePaths[0], 'utf8');
+      const backupData = JSON.parse(fileContent);
+      // Restore the database
+      const restoreResult = await database.importFromJSON(backupData);
+      return { success: true, filePath: result.filePaths[0], result: restoreResult };
+    } catch (error) {
+      console.error('Error restoring backup:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  
+  return { success: false, canceled: true };
 });
 
 // BLE device IPC handlers

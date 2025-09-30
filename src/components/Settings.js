@@ -205,23 +205,13 @@ const Settings = () => {
 
   const handleBackupDatabase = async () => {
     try {
-      const backupData = await window.electronAPI.exportDatabase();
+      const result = await window.electronAPI.showSaveDialogBackup();
       
-      // Create a JSON blob and download it
-      const dataStr = JSON.stringify(backupData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      
-      // Create download link
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `timetracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      alert(t('settings.backupSuccess'));
+      if (result.success) {
+        alert(t('settings.backupSuccess'));
+      } else if (!result.canceled) {
+        alert(t('settings.backupError') + (result.error ? ': ' + result.error : ''));
+      }
     } catch (error) {
       console.error('Failed to backup database:', error);
       alert(t('settings.backupError'));
@@ -233,31 +223,20 @@ const Settings = () => {
       return;
     }
 
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json,.json';
-    
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    try {
+      const result = await window.electronAPI.showOpenDialogRestore();
       
-      try {
-        const text = await file.text();
-        const backupData = JSON.parse(text);
-        
-        await window.electronAPI.importDatabase(backupData);
+      if (result.success) {
         alert(t('settings.restoreSuccess'));
-        
         // Reload the page to refresh all data
         window.location.reload();
-      } catch (error) {
-        console.error('Failed to restore database:', error);
-        alert(t('settings.restoreError') + ': ' + error.message);
+      } else if (!result.canceled) {
+        alert(t('settings.restoreError') + (result.error ? ': ' + result.error : ''));
       }
-    };
-    
-    input.click();
+    } catch (error) {
+      console.error('Failed to restore database:', error);
+      alert(t('settings.restoreError') + ': ' + error.message);
+    }
   };
 
   // Load office presence setting and initialize monitoring
