@@ -329,6 +329,15 @@ ipcMain.handle('get-app-version', async () => {
   return database.getAppVersion();
 });
 
+// Backup and restore IPC handlers
+ipcMain.handle('export-database', async () => {
+  return await database.exportToJSON();
+});
+
+ipcMain.handle('import-database', async (event, backupData) => {
+  return await database.importFromJSON(backupData);
+});
+
 // BLE device IPC handlers
 ipcMain.handle('get-ble-devices', async () => {
   return await database.getBleDevices();

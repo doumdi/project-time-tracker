@@ -216,7 +216,18 @@
     "enableBleLogs": "Enable BLE Debug Logs",
     "bleLogsDescription": "Show detailed BLE scanning and device discovery logs in the console for debugging purposes.",
     "enablePresenceLogs": "Enable Presence Monitor Debug Logs",
-    "presenceLogsDescription": "Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes."
+    "presenceLogsDescription": "Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes.",
+    "backupRestore": "Backup & Restore",
+    "backupDatabase": "Backup Database",
+    "backupDescription": "Export your entire database to a JSON file. This includes all projects, time entries, tasks, and settings.",
+    "restoreDatabase": "Restore Database",
+    "restoreDescription": "Restore your database from a previously exported JSON file. This will replace all current data.",
+    "backupSuccess": "Database backed up successfully!",
+    "restoreSuccess": "Database restored successfully!",
+    "backupError": "Error creating backup",
+    "restoreError": "Error restoring database",
+    "confirmRestore": "Are you sure you want to restore the database? This will replace all current data and cannot be undone.",
+    "selectBackupFile": "Select backup file to restore"
   },
   "common": {
     "save": "Save",

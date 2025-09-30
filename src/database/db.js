@@ -1161,6 +1161,183 @@ function getActiveTask() {
   });
 }
 
+// Backup and restore functions
+function exportToJSON() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const backup = {
+        version: CURRENT_DB_VERSION,
+        appVersion: appVersion,
+        exportDate: new Date().toISOString(),
+        data: {}
+      };
+
+      // Get all data from each table
+      const tables = [
+        'app_metadata',
+        'projects',
+        'time_entries',
+        'ble_devices',
+        'office_presence',
+        'tasks',
+        'subtasks'
+      ];
+
+      for (const table of tables) {
+        await new Promise((resolveTable, rejectTable) => {
+          db.all(`SELECT * FROM ${table}`, [], (err, rows) => {
+            if (err) {
+              // Table might not exist in older databases
+              console.warn(`Could not export table ${table}:`, err.message);
+              backup.data[table] = [];
+              resolveTable();
+            } else {
+              backup.data[table] = rows || [];
+              resolveTable();
+            }
+          });
+        });
+      }
+
+      resolve(backup);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function importFromJSON(backupData) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!backupData || !backupData.data) {
+        throw new Error('Invalid backup data format');
+      }
+
+      // Disable foreign key constraints temporarily for clean import
+      await new Promise((res, rej) => {
+        db.run('PRAGMA foreign_keys = OFF', (err) => {
+          if (err) rej(err);
+          else res();
+        });
+      });
+
+      // Begin transaction
+      await new Promise((res, rej) => {
+        db.run('BEGIN TRANSACTION', (err) => {
+          if (err) rej(err);
+          else res();
+        });
+      });
+
+      try {
+        // Clear existing data (except app_metadata which we'll handle specially)
+        const clearTables = [
+          'subtasks',
+          'time_entries',
+          'tasks',
+          'office_presence',
+          'ble_devices',
+          'projects'
+        ];
+
+        for (const table of clearTables) {
+          await new Promise((res, rej) => {
+            db.run(`DELETE FROM ${table}`, [], (err) => {
+              if (err) {
+                console.warn(`Could not clear table ${table}:`, err.message);
+              }
+              res(); // Continue even if table doesn't exist
+            });
+          });
+        }
+
+        // Import data for each table
+        const importOrder = [
+          'projects',
+          'ble_devices',
+          'tasks',
+          'subtasks',
+          'time_entries',
+          'office_presence'
+        ];
+
+        for (const table of importOrder) {
+          const rows = backupData.data[table] || [];
+          
+          if (rows.length === 0) continue;
+
+          // Get column names from the first row
+          const columns = Object.keys(rows[0]);
+          const placeholders = columns.map(() => '?').join(',');
+          const sql = `INSERT INTO ${table} (${columns.join(',')}) VALUES (${placeholders})`;
+
+          for (const row of rows) {
+            const values = columns.map(col => row[col]);
+            await new Promise((res, rej) => {
+              db.run(sql, values, (err) => {
+                if (err) {
+                  console.error(`Error importing row to ${table}:`, err.message);
+                  rej(err);
+                } else {
+                  res();
+                }
+              });
+            });
+          }
+        }
+
+        // Import app_metadata (but preserve current database version)
+        if (backupData.data.app_metadata) {
+          for (const row of backupData.data.app_metadata) {
+            // Skip database_version to maintain current schema version
+            if (row.key === 'database_version') continue;
+            
+            await new Promise((res, rej) => {
+              const sql = `INSERT OR REPLACE INTO app_metadata (key, value, updated_at) VALUES (?, ?, ?)`;
+              db.run(sql, [row.key, row.value, row.updated_at], (err) => {
+                if (err) rej(err);
+                else res();
+              });
+            });
+          }
+        }
+
+        // Commit transaction
+        await new Promise((res, rej) => {
+          db.run('COMMIT', (err) => {
+            if (err) rej(err);
+            else res();
+          });
+        });
+
+        // Re-enable foreign key constraints
+        await new Promise((res, rej) => {
+          db.run('PRAGMA foreign_keys = ON', (err) => {
+            if (err) rej(err);
+            else res();
+          });
+        });
+
+        resolve({ success: true, message: 'Database restored successfully' });
+      } catch (err) {
+        // Rollback on error
+        await new Promise((res) => {
+          db.run('ROLLBACK', () => res());
+        });
+        
+        // Re-enable foreign key constraints
+        await new Promise((res) => {
+          db.run('PRAGMA foreign_keys = ON', () => res());
+        });
+        
+        throw err;
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 // Initialize database when module is loaded (skip in demo mode, will be initialized manually)
 if (!isDemoMode && app && app.isReady()) {
   initDatabase();
@@ -1205,5 +1382,7 @@ module.exports = {
   getSubTasks,
   addSubTask,
   updateSubTask,
-  deleteSubTask
+  deleteSubTask,
+  exportToJSON,
+  importFromJSON
 };

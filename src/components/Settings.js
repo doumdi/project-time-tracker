@@ -203,6 +203,63 @@ const Settings = () => {
     }
   };
 
+  const handleBackupDatabase = async () => {
+    try {
+      const backupData = await window.electronAPI.exportDatabase();
+      
+      // Create a JSON blob and download it
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      
+      // Create download link
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `timetracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      alert(t('settings.backupSuccess'));
+    } catch (error) {
+      console.error('Failed to backup database:', error);
+      alert(t('settings.backupError'));
+    }
+  };
+
+  const handleRestoreDatabase = async () => {
+    if (!confirm(t('settings.confirmRestore'))) {
+      return;
+    }
+
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const backupData = JSON.parse(text);
+        
+        await window.electronAPI.importDatabase(backupData);
+        alert(t('settings.restoreSuccess'));
+        
+        // Reload the page to refresh all data
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to restore database:', error);
+        alert(t('settings.restoreError') + ': ' + error.message);
+      }
+    };
+    
+    input.click();
+  };
+
   // Load office presence setting and initialize monitoring
   useEffect(() => {
     const initializePresenceMonitoring = async () => {
@@ -514,6 +571,46 @@ const Settings = () => {
                 <small style={{ color: '#666', marginTop: '0.5rem', display: 'block' }}>
                   {t('settings.presenceLogsDescription') || 'Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes.'}
                 </small>
+              </div>
+            </div>
+
+            {/* Backup & Restore Settings */}
+            <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#fff4e6', borderRadius: '8px', border: '1px solid #ffd699' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#333' }}>
+                {t('settings.backupRestore') || 'Backup & Restore'}
+              </h3>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333' }}>
+                  {t('settings.backupDatabase') || 'Backup Database'}
+                </h4>
+                <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.9rem' }}>
+                  {t('settings.backupDescription') || 'Export your entire database to a JSON file. This includes all projects, time entries, tasks, and settings.'}
+                </p>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={handleBackupDatabase}
+                >
+                  📥 {t('settings.backupDatabase') || 'Backup Database'}
+                </button>
+              </div>
+
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333' }}>
+                  {t('settings.restoreDatabase') || 'Restore Database'}
+                </h4>
+                <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.9rem' }}>
+                  {t('settings.restoreDescription') || 'Restore your database from a previously exported JSON file. This will replace all current data.'}
+                </p>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={handleRestoreDatabase}
+                  style={{ backgroundColor: '#dc3545' }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                >
+                  📤 {t('settings.restoreDatabase') || 'Restore Database'}
+                </button>
               </div>
             </div>
 
