@@ -396,6 +396,23 @@ ipcMain.handle('get-active-task', async () => {
   return await database.getActiveTask();
 });
 
+// Subtask operations
+ipcMain.handle('get-subtasks', async (event, parentTaskId) => {
+  return await database.getSubTasks(parentTaskId);
+});
+
+ipcMain.handle('add-subtask', async (event, subtask) => {
+  return await database.addSubTask(subtask);
+});
+
+ipcMain.handle('update-subtask', async (event, subtask) => {
+  return await database.updateSubTask(subtask);
+});
+
+ipcMain.handle('delete-subtask', async (event, id) => {
+  return await database.deleteSubTask(id);
+});
+
 // BLE scanning IPC handlers
 ipcMain.handle('start-ble-scan', async () => {
   if (!noble) {
