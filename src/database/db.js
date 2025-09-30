@@ -16,12 +16,15 @@ try {
 // Current database version - increment this when schema changes
 const CURRENT_DB_VERSION = 5;
 
+// Demo mode flag - set by setDemoMode() function
+let isDemoMode = false;
+
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
 const dbPath = path.join(userDataPath, 'timetracker.db');
 
-// Ensure data directory exists
-if (!fs.existsSync(userDataPath)) {
+// Ensure data directory exists (skip in demo mode)
+if (!isDemoMode && !fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath, { recursive: true });
 }
 
@@ -58,6 +61,14 @@ function closeDatabase() {
   });
 }
 
+// Set demo mode - must be called before initDatabase
+function setDemoMode(enabled) {
+  isDemoMode = enabled;
+  if (enabled) {
+    console.log('[DEMO MODE] Database will use in-memory storage');
+  }
+}
+
 // Initialize database
 function initDatabase() {
   if (isInitialized) {
@@ -65,17 +76,24 @@ function initDatabase() {
   }
   
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, async (err) => {
+    // Use in-memory database for demo mode, file-based for normal mode
+    const databasePath = isDemoMode ? ':memory:' : dbPath;
+    const modeLabel = isDemoMode ? 'in-memory (DEMO MODE)' : `file at ${dbPath}`;
+    
+    db = new sqlite3.Database(databasePath, async (err) => {
       if (err) {
         console.error('Error opening database:', err);
         reject(err);
       } else {
-        console.log('Connected to SQLite database at:', dbPath);
+        console.log(`Connected to SQLite database ${modeLabel}`);
         try {
           await createTables();
-          const upgradeOccurred = await runMigrations();
-          if (upgradeOccurred) {
-            console.log('Database has been upgraded to the latest version.');
+          // Skip migrations in demo mode (in-memory database starts fresh)
+          if (!isDemoMode) {
+            const upgradeOccurred = await runMigrations();
+            if (upgradeOccurred) {
+              console.log('Database has been upgraded to the latest version.');
+            }
           }
           isInitialized = true;
           resolve();
@@ -99,7 +117,20 @@ function createTables() {
       )
     `;
 
-    const createProjectsTable = `
+    // In demo mode, include all columns that migrations would add
+    const createProjectsTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        color TEXT DEFAULT '#4CAF50',
+        budget DECIMAL(10,2) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -110,17 +141,74 @@ function createTables() {
       )
     `;
 
-    const createTimeEntriesTable = `
+    const createTimeEntriesTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS time_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        task_id INTEGER,
+        description TEXT,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS time_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
         description TEXT,
         start_time DATETIME NOT NULL,
         end_time DATETIME,
-        duration INTEGER, -- Duration in minutes
+        duration INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    `;
+    
+    // BLE devices table (from v4 migration)
+    const createBleDevicesTable = `
+      CREATE TABLE IF NOT EXISTS ble_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        mac_address TEXT UNIQUE NOT NULL,
+        device_type TEXT DEFAULT 'unknown',
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    // Office presence table (from v4 migration)
+    const createOfficePresenceTable = `
+      CREATE TABLE IF NOT EXISTS office_presence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATE NOT NULL,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER NOT NULL,
+        device_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
+      )
+    `;
+    
+    // Tasks table (from v5 migration)
+    const createTasksTable = `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        due_date DATE,
+        project_id INTEGER,
+        allocated_time INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
       )
     `;
 
@@ -145,6 +233,31 @@ function createTables() {
       db.run(createTimeEntriesTable, (err) => {
         if (err) {
           console.error('Error creating time_entries table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      // Create BLE and task tables (needed for demo mode and v4/v5 migrations)
+      db.run(createBleDevicesTable, (err) => {
+        if (err) {
+          console.error('Error creating ble_devices table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createOfficePresenceTable, (err) => {
+        if (err) {
+          console.error('Error creating office_presence table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createTasksTable, (err) => {
+        if (err) {
+          console.error('Error creating tasks table:', err);
           reject(err);
           return;
         }
@@ -912,18 +1025,20 @@ function getActiveTask() {
   });
 }
 
-// Initialize database when module is loaded
-if (app && app.isReady()) {
+// Initialize database when module is loaded (skip in demo mode, will be initialized manually)
+if (!isDemoMode && app && app.isReady()) {
   initDatabase();
-} else if (app) {
+} else if (!isDemoMode && app) {
   app.whenReady().then(initDatabase);
-} else {
+} else if (!isDemoMode) {
   // For testing or non-electron environments
   initDatabase();
 }
 
 module.exports = {
   initDatabase,
+  setDemoMode,
+  closeDatabase,
   getProjects,
   addProject,
   updateProject,

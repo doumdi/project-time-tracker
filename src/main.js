@@ -2,9 +2,14 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
+// Check for demo mode command line argument
+const isDemoMode = process.argv.includes('--demo_mode');
+
 let mainWindow;
 
 function createWindow() {
+  const windowTitle = isDemoMode ? 'Project Time Tracker (DEMO MODE)' : 'Project Time Tracker';
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -15,7 +20,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, '../assets/icon.png'), // Add icon later
-    title: 'Project Time Tracker'
+    title: windowTitle
   });
 
   // Load the app
@@ -31,7 +36,22 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize demo mode database if requested
+  if (isDemoMode) {
+    try {
+      console.log('[DEMO MODE] Initializing in-memory database...');
+      await database.initDatabase();
+      
+      const { populateDemoData } = require('./database/populate-demo-data');
+      await populateDemoData();
+      
+      console.log('[DEMO MODE] Demo database ready!');
+    } catch (error) {
+      console.error('[DEMO MODE] Failed to initialize demo database:', error);
+    }
+  }
+  
   createWindow();
   
   // After the renderer finishes loading, check renderer localStorage for the
@@ -41,6 +61,12 @@ app.whenReady().then(() => {
   if (mainWindow) {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
+        // In demo mode, skip localStorage checks
+        if (isDemoMode) {
+          console.log('[DEMO MODE] Skipping localStorage checks in demo mode');
+          return;
+        }
+        
         // Read the saved preference directly from the renderer's localStorage.
         // webContents.send does not return a value; use executeJavaScript to query localStorage.
         const storedPresence = await mainWindow.webContents.executeJavaScript("localStorage.getItem('officePresenceEnabled');");
@@ -192,6 +218,14 @@ app.on('activate', () => {
 
 // Database operations will be handled here
 const database = require('./database/db');
+
+// Initialize demo mode if requested
+if (isDemoMode) {
+  console.log('[DEMO MODE] Application starting in DEMO MODE');
+  console.log('[DEMO MODE] - Using in-memory database');
+  console.log('[DEMO MODE] - Mock BLE device discovery enabled');
+  database.setDemoMode(true);
+}
 
 // Import MCP server functionality
 const { TimeTrackerHttpMCPServer } = require('./mcp-server/http-server');
@@ -748,6 +782,52 @@ async function stopMcpServer() {
 
 // BLE scanning functions
 function startBleScan() {
+  // Demo mode: Return mock BLE devices
+  if (isDemoMode) {
+    bleLog('[DEMO MODE] Starting mock BLE device scan...');
+    bleState.isScanning = true;
+    bleState.discoveredDevices.clear();
+    
+    // Notify frontend to clear discovered devices
+    if (mainWindow) {
+      mainWindow.webContents.send('ble-devices-cleared');
+    }
+    
+    // Import demo BLE devices
+    const { BLE_DEVICE_TEMPLATES } = require('./database/populate-demo-data');
+    
+    // Simulate device discovery with delays
+    BLE_DEVICE_TEMPLATES.forEach((template, index) => {
+      setTimeout(() => {
+        const device = {
+          id: template.mac_address.replace(/:/g, ''),
+          name: template.name,
+          mac_address: template.mac_address,
+          device_type: template.device_type,
+          rssi: -50 - Math.floor(Math.random() * 30), // Random RSSI between -50 and -80
+          discovered_at: new Date().toISOString()
+        };
+        
+        bleLog(`[DEMO MODE] Discovered device: ${device.name} (${device.mac_address}) RSSI: ${device.rssi}dBm`);
+        bleState.discoveredDevices.set(device.id, device);
+        
+        // Send real-time update to renderer immediately
+        if (mainWindow) {
+          mainWindow.webContents.send('ble-device-discovered', device);
+        }
+      }, 500 * (index + 1)); // Stagger discoveries by 500ms
+    });
+    
+    // Stop scanning after all devices are "discovered"
+    setTimeout(() => {
+      if (bleState.isScanning) {
+        stopBleScan();
+      }
+    }, 500 * (BLE_DEVICE_TEMPLATES.length + 2));
+    
+    return;
+  }
+  
   if (!noble || bleState.isScanning) {
     bleLog('[BLE SCAN] Cannot start scan - noble not available or already scanning');
     return;
@@ -801,6 +881,17 @@ function startBleScan() {
 }
 
 function stopBleScan() {
+  // Demo mode support
+  if (isDemoMode) {
+    bleLog('[DEMO MODE] Stopping mock BLE device scan');
+    bleState.isScanning = false;
+    
+    if (mainWindow) {
+      mainWindow.webContents.send('ble-scan-stopped');
+    }
+    return;
+  }
+  
   if (!noble || !bleState.isScanning) return;
   
   bleLog('[BLE SCAN] Stopping BLE device scan');
@@ -813,6 +904,69 @@ function stopBleScan() {
 }
 
 function startContinuousScanning() {
+  // Demo mode: Simulate continuous discovery
+  if (isDemoMode) {
+    if (bleState.continuousScanning) {
+      presenceLog('[DEMO MODE] Continuous scanning already active');
+      return;
+    }
+    
+    bleLog('[DEMO MODE] Starting continuous mock BLE scanning (every minute)');
+    bleState.continuousScanning = true;
+    
+    const { BLE_DEVICE_TEMPLATES } = require('./database/populate-demo-data');
+    
+    // Function to discover all devices
+    const discoverDevices = () => {
+      BLE_DEVICE_TEMPLATES.forEach((template, index) => {
+        setTimeout(() => {
+          const device = {
+            id: template.mac_address.replace(/:/g, ''),
+            name: template.name,
+            mac_address: template.mac_address,
+            device_type: template.device_type,
+            rssi: -50 - Math.floor(Math.random() * 30), // Random RSSI between -50 and -80
+            discovered_at: new Date().toISOString()
+          };
+          
+          bleLog(`[DEMO MODE] Discovered device: ${device.name} (${device.mac_address}) RSSI: ${device.rssi}dBm`);
+          bleState.discoveredDevices.set(device.id, device);
+          
+          // Send real-time update to renderer for BLE settings
+          if (mainWindow) {
+            mainWindow.webContents.send('ble-device-discovered', device);
+          }
+          
+          // Simulate presence detection for enabled devices
+          if (template.is_enabled) {
+            // Create a peripheral-like object for presence handling
+            const mockPeripheral = {
+              id: device.id,
+              address: device.mac_address,
+              advertisement: {
+                localName: device.name
+              },
+              rssi: device.rssi
+            };
+            handlePresenceDeviceDiscovery(mockPeripheral);
+          }
+        }, 500 * (index + 1)); // Stagger discoveries by 500ms
+      });
+    };
+    
+    // Start periodic discovery every minute
+    bleState.periodicScanTimer = setInterval(() => {
+      bleLog('[DEMO MODE] Starting periodic mock BLE scan cycle...');
+      discoverDevices();
+    }, 60000); // Every minute
+    
+    // Start the first scan immediately
+    bleLog('[DEMO MODE] Starting initial mock BLE scan...');
+    discoverDevices();
+    
+    return;
+  }
+  
   if (!noble || bleState.continuousScanning) {
     presenceLog('[PRESENCE MONITOR] Cannot start continuous scanning - already active or noble not available');
     return;
@@ -900,6 +1054,26 @@ function startContinuousScanning() {
 }
 
 function stopContinuousScanning() {
+  // Demo mode support
+  if (isDemoMode) {
+    bleLog('[DEMO MODE] Stopping continuous mock BLE scanning');
+    bleState.continuousScanning = false;
+    
+    // Clear the periodic scan timer
+    if (bleState.periodicScanTimer) {
+      clearInterval(bleState.periodicScanTimer);
+      bleState.periodicScanTimer = null;
+      presenceLog('[DEMO MODE] Cleared periodic scan timer');
+    }
+    
+    bleState.currentDetectedDevices.clear();
+    bleState.lastDeviceDetection.clear();
+    bleState.deviceDetectionStartTime.clear();
+    bleState.globalPresenceStartTime = null;
+    presenceLog('[DEMO MODE] Cleared all presence tracking state');
+    return;
+  }
+  
   if (!noble) return;
   
   bleLog('[PRESENCE MONITOR] Stopping continuous BLE scanning');
@@ -998,6 +1172,37 @@ function getDeviceType(peripheral) {
 
 // Office presence monitoring
 async function startPresenceMonitoring() {
+  // Demo mode support
+  if (isDemoMode) {
+    if (bleState.presenceTimer) {
+      console.log('[DEMO MODE] Presence monitoring already active');
+      return;
+    }
+    
+    const enabledDevices = await database.getBleDevices();
+    const monitoredDevices = enabledDevices.filter(device => device.is_enabled);
+    
+    if (monitoredDevices.length === 0) {
+      console.log('[DEMO MODE] No enabled devices for presence monitoring');
+      return;
+    }
+    
+    console.log('[DEMO MODE] Starting presence monitoring for', monitoredDevices.length, 'devices');
+    
+    // Start continuous scanning
+    startContinuousScanning();
+    
+    // Start periodic presence save timer
+    startPresenceSaveTimer();
+    
+    // Check for device timeouts every 30 seconds
+    bleState.presenceTimer = setInterval(async () => {
+      await checkDeviceTimeouts();
+    }, 30000);
+    
+    return;
+  }
+  
   if (!noble || bleState.presenceTimer) return;
   
   const enabledDevices = await database.getBleDevices();

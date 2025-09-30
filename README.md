@@ -10,6 +10,8 @@ Author(s) :
 
 ## Screenshots
 
+> **Note:** All screenshots below are taken in demo mode with pre-populated sample data. See the [Demo Mode](#demo-mode) section to run the app with demo data.
+
 ### Time Tracker
 ![Time Tracker Interface](docs/images/screenshot-time-tracker.png)
 
@@ -109,6 +111,33 @@ Author(s) :
    # Create distributable packages
    npm run dist
    ```
+
+## Demo Mode
+
+Try the application with pre-populated demo data without affecting your real database!
+
+**Run in demo mode:**
+```bash
+# Build the app first
+npm run build
+
+# Start in demo mode
+npm run electron-demo
+```
+
+Or manually:
+```bash
+npm run electron -- --demo_mode
+```
+
+**Demo mode features:**
+- ✅ **In-memory database** - No files created, all data is temporary
+- ✅ **Pre-populated data** - 10 projects, 280+ time entries, 10 tasks over 3 months
+- ✅ **Mock BLE devices** - 5 sample Bluetooth devices for testing presence tracking
+- ✅ **Realistic work patterns** - Natural work hours (no weekends), breaks, and sessions
+- ✅ **Perfect for screenshots** - Ideal for documentation and demonstrations
+
+The window title will display "(DEMO MODE)" when running in demo mode. All data is lost when you close the application.
 
 ## Usage
 
