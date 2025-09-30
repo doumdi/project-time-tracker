@@ -73,7 +73,7 @@ MIT License
 - Avoid packages that require cloud services or external dependencies.
 
 ## Versioning the App
-- Upgrade micro version for every issue fix or small change.
+- Upgrade micro version for every issue fix or small change. Make sure to update the version in `package.json` and `version.json`.
 
 
 ## Additional Context

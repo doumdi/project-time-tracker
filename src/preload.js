@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDatabaseVersion: () => ipcRenderer.invoke('get-database-version'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   
+  // Backup and restore operations
+  exportDatabase: () => ipcRenderer.invoke('export-database'),
+  importDatabase: (backupData) => ipcRenderer.invoke('import-database', backupData),
+  showSaveDialogBackup: () => ipcRenderer.invoke('show-save-dialog-backup'),
+  showOpenDialogRestore: () => ipcRenderer.invoke('show-open-dialog-restore'),
+  
   // BLE device operations
   getBleDevices: () => ipcRenderer.invoke('get-ble-devices'),
   addBleDevice: (device) => ipcRenderer.invoke('add-ble-device', device),
