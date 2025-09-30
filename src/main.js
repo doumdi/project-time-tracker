@@ -904,6 +904,69 @@ function stopBleScan() {
 }
 
 function startContinuousScanning() {
+  // Demo mode: Simulate continuous discovery
+  if (isDemoMode) {
+    if (bleState.continuousScanning) {
+      presenceLog('[DEMO MODE] Continuous scanning already active');
+      return;
+    }
+    
+    bleLog('[DEMO MODE] Starting continuous mock BLE scanning (every minute)');
+    bleState.continuousScanning = true;
+    
+    const { BLE_DEVICE_TEMPLATES } = require('./database/populate-demo-data');
+    
+    // Function to discover all devices
+    const discoverDevices = () => {
+      BLE_DEVICE_TEMPLATES.forEach((template, index) => {
+        setTimeout(() => {
+          const device = {
+            id: template.mac_address.replace(/:/g, ''),
+            name: template.name,
+            mac_address: template.mac_address,
+            device_type: template.device_type,
+            rssi: -50 - Math.floor(Math.random() * 30), // Random RSSI between -50 and -80
+            discovered_at: new Date().toISOString()
+          };
+          
+          bleLog(`[DEMO MODE] Discovered device: ${device.name} (${device.mac_address}) RSSI: ${device.rssi}dBm`);
+          bleState.discoveredDevices.set(device.id, device);
+          
+          // Send real-time update to renderer for BLE settings
+          if (mainWindow) {
+            mainWindow.webContents.send('ble-device-discovered', device);
+          }
+          
+          // Simulate presence detection for enabled devices
+          if (template.is_enabled) {
+            // Create a peripheral-like object for presence handling
+            const mockPeripheral = {
+              id: device.id,
+              address: device.mac_address,
+              advertisement: {
+                localName: device.name
+              },
+              rssi: device.rssi
+            };
+            handlePresenceDeviceDiscovery(mockPeripheral);
+          }
+        }, 500 * (index + 1)); // Stagger discoveries by 500ms
+      });
+    };
+    
+    // Start periodic discovery every minute
+    bleState.periodicScanTimer = setInterval(() => {
+      bleLog('[DEMO MODE] Starting periodic mock BLE scan cycle...');
+      discoverDevices();
+    }, 60000); // Every minute
+    
+    // Start the first scan immediately
+    bleLog('[DEMO MODE] Starting initial mock BLE scan...');
+    discoverDevices();
+    
+    return;
+  }
+  
   if (!noble || bleState.continuousScanning) {
     presenceLog('[PRESENCE MONITOR] Cannot start continuous scanning - already active or noble not available');
     return;
@@ -991,6 +1054,26 @@ function startContinuousScanning() {
 }
 
 function stopContinuousScanning() {
+  // Demo mode support
+  if (isDemoMode) {
+    bleLog('[DEMO MODE] Stopping continuous mock BLE scanning');
+    bleState.continuousScanning = false;
+    
+    // Clear the periodic scan timer
+    if (bleState.periodicScanTimer) {
+      clearInterval(bleState.periodicScanTimer);
+      bleState.periodicScanTimer = null;
+      presenceLog('[DEMO MODE] Cleared periodic scan timer');
+    }
+    
+    bleState.currentDetectedDevices.clear();
+    bleState.lastDeviceDetection.clear();
+    bleState.deviceDetectionStartTime.clear();
+    bleState.globalPresenceStartTime = null;
+    presenceLog('[DEMO MODE] Cleared all presence tracking state');
+    return;
+  }
+  
   if (!noble) return;
   
   bleLog('[PRESENCE MONITOR] Stopping continuous BLE scanning');
@@ -1089,6 +1172,37 @@ function getDeviceType(peripheral) {
 
 // Office presence monitoring
 async function startPresenceMonitoring() {
+  // Demo mode support
+  if (isDemoMode) {
+    if (bleState.presenceTimer) {
+      console.log('[DEMO MODE] Presence monitoring already active');
+      return;
+    }
+    
+    const enabledDevices = await database.getBleDevices();
+    const monitoredDevices = enabledDevices.filter(device => device.is_enabled);
+    
+    if (monitoredDevices.length === 0) {
+      console.log('[DEMO MODE] No enabled devices for presence monitoring');
+      return;
+    }
+    
+    console.log('[DEMO MODE] Starting presence monitoring for', monitoredDevices.length, 'devices');
+    
+    // Start continuous scanning
+    startContinuousScanning();
+    
+    // Start periodic presence save timer
+    startPresenceSaveTimer();
+    
+    // Check for device timeouts every 30 seconds
+    bleState.presenceTimer = setInterval(async () => {
+      await checkDeviceTimeouts();
+    }, 30000);
+    
+    return;
+  }
+  
   if (!noble || bleState.presenceTimer) return;
   
   const enabledDevices = await database.getBleDevices();
