@@ -14,7 +14,7 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 6;
+const CURRENT_DB_VERSION = 7;
 
 // Demo mode flag - set by setDemoMode() function
 let isDemoMode = false;
@@ -146,6 +146,7 @@ function createTables() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
         task_id INTEGER,
+        subtask_id INTEGER,
         description TEXT,
         start_time DATETIME NOT NULL,
         end_time DATETIME,
@@ -153,7 +154,8 @@ function createTables() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
-        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL
+        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL,
+        FOREIGN KEY (subtask_id) REFERENCES subtasks (id) ON DELETE SET NULL
       )
     ` : `
       CREATE TABLE IF NOT EXISTS time_entries (
@@ -541,9 +543,11 @@ function getTimeEntries(filters = {}) {
 
 function addTimeEntry(entry) {
   return new Promise((resolve, reject) => {
-    const sql = 'INSERT INTO time_entries (project_id, description, start_time, end_time, duration) VALUES (?, ?, ?, ?, ?)';
+    const sql = 'INSERT INTO time_entries (project_id, task_id, subtask_id, description, start_time, end_time, duration) VALUES (?, ?, ?, ?, ?, ?, ?)';
     const params = [
       entry.project_id,
+      entry.task_id || null,
+      entry.subtask_id || null,
       entry.description || '',
       entry.start_time,
       entry.end_time,
@@ -562,9 +566,11 @@ function addTimeEntry(entry) {
 
 function updateTimeEntry(entry) {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE time_entries SET project_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const sql = 'UPDATE time_entries SET project_id = ?, task_id = ?, subtask_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     const params = [
       entry.project_id,
+      entry.task_id || null,
+      entry.subtask_id || null,
       entry.description,
       entry.start_time,
       entry.end_time,

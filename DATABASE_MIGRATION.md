@@ -191,6 +191,7 @@ useEffect(() => {
   - `v4.js`: Add BLE devices and office presence tables
   - `v5.js`: Add tasks table with project association and time tracking
   - `v6.js`: Make project_id mandatory for tasks and add subtasks table
+  - `v7.js`: Add task_id and subtask_id to time_entries for detailed time tracking
 - `src/main.js`: IPC handlers for version functions
 - `src/preload.js`: Frontend API exposure
 - `src/components/Settings.js`: Version display in UI
