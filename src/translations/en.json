@@ -128,7 +128,27 @@
     "onlyOneActiveTask": "Only one task can be active at a time",
     "selectProjectForTimeEntry": "Please select a project for this task to enable time tracking",
     "noProject": "No project",
-    "taskNameRequired": "Please enter a task name"
+    "taskNameRequired": "Please enter a task name",
+    "searchTasks": "Search tasks...",
+    "filterByName": "Filter by name",
+    "showingAllTasks": "Showing all tasks and subtasks",
+    "subtasks": "Subtasks",
+    "addSubtask": "Add Subtask",
+    "subtaskName": "Subtask Name",
+    "subtaskNamePlaceholder": "What needs to be done?",
+    "completed": "Completed",
+    "notCompleted": "Not Completed",
+    "markComplete": "Mark Complete",
+    "markIncomplete": "Mark Incomplete",
+    "subtaskCreated": "Subtask created successfully!",
+    "subtaskUpdated": "Subtask updated successfully!",
+    "subtaskDeleted": "Subtask deleted successfully!",
+    "confirmDeleteSubtask": "Are you sure you want to delete this subtask?",
+    "noSubtasks": "No subtasks yet",
+    "createFirstSubtask": "Break down this task into smaller steps!",
+    "errorCreatingSubtask": "Error creating subtask",
+    "errorUpdatingSubtask": "Error updating subtask",
+    "errorDeletingSubtask": "Error deleting subtask"
   },
   "calendar": {
     "title": "Calendar",
@@ -196,7 +216,18 @@
     "enableBleLogs": "Enable BLE Debug Logs",
     "bleLogsDescription": "Show detailed BLE scanning and device discovery logs in the console for debugging purposes.",
     "enablePresenceLogs": "Enable Presence Monitor Debug Logs",
-    "presenceLogsDescription": "Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes."
+    "presenceLogsDescription": "Show detailed presence monitoring, device tracking, and session management logs in the console for debugging purposes.",
+    "backupRestore": "Backup & Restore",
+    "backupDatabase": "Backup Database",
+    "backupDescription": "Export your entire database to a JSON file. This includes all projects, time entries, tasks, and settings.",
+    "restoreDatabase": "Restore Database",
+    "restoreDescription": "Restore your database from a previously exported JSON file. This will replace all current data.",
+    "backupSuccess": "Database backed up successfully!",
+    "restoreSuccess": "Database restored successfully!",
+    "backupError": "Error creating backup",
+    "restoreError": "Error restoring database",
+    "confirmRestore": "Are you sure you want to restore the database? This will replace all current data and cannot be undone.",
+    "selectBackupFile": "Select backup file to restore"
   },
   "common": {
     "save": "Save",
@@ -216,7 +247,9 @@
     "back": "Back",
     "unknown": "Unknown",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "add": "Add",
+    "results": "results"
   },
   "presence": {
     "title": "Office Presence",

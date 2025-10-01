@@ -128,7 +128,27 @@
     "onlyOneActiveTask": "Une seule tâche peut être active à la fois",
     "selectProjectForTimeEntry": "Veuillez sélectionner un projet pour cette tâche pour activer le suivi du temps",
     "noProject": "Aucun projet",
-    "taskNameRequired": "Veuillez entrer un nom de tâche"
+    "taskNameRequired": "Veuillez entrer un nom de tâche",
+    "searchTasks": "Rechercher des tâches...",
+    "filterByName": "Filtrer par nom",
+    "showingAllTasks": "Affichage de toutes les tâches et sous-tâches",
+    "subtasks": "Sous-tâches",
+    "addSubtask": "Ajouter une Sous-tâche",
+    "subtaskName": "Nom de la Sous-tâche",
+    "subtaskNamePlaceholder": "Que faut-il faire ?",
+    "completed": "Terminée",
+    "notCompleted": "Non terminée",
+    "markComplete": "Marquer comme terminée",
+    "markIncomplete": "Marquer comme non terminée",
+    "subtaskCreated": "Sous-tâche créée avec succès !",
+    "subtaskUpdated": "Sous-tâche mise à jour avec succès !",
+    "subtaskDeleted": "Sous-tâche supprimée avec succès !",
+    "confirmDeleteSubtask": "Êtes-vous sûr de vouloir supprimer cette sous-tâche ?",
+    "noSubtasks": "Aucune sous-tâche pour le moment",
+    "createFirstSubtask": "Décomposez cette tâche en étapes plus petites !",
+    "errorCreatingSubtask": "Erreur lors de la création de la sous-tâche",
+    "errorUpdatingSubtask": "Erreur lors de la mise à jour de la sous-tâche",
+    "errorDeletingSubtask": "Erreur lors de la suppression de la sous-tâche"
   },
   "calendar": {
     "title": "Calendrier",
@@ -196,7 +216,18 @@
     "enableBleLogs": "Activer les Logs de Débogage BLE",
     "bleLogsDescription": "Afficher les logs détaillés de scan BLE et de découverte d'appareils dans la console à des fins de débogage.",
     "enablePresenceLogs": "Activer les Logs de Débogage du Moniteur de Présence",
-    "presenceLogsDescription": "Afficher les logs détaillés de surveillance de présence, de suivi d'appareils et de gestion de sessions dans la console à des fins de débogage."
+    "presenceLogsDescription": "Afficher les logs détaillés de surveillance de présence, de suivi d'appareils et de gestion de sessions dans la console à des fins de débogage.",
+    "backupRestore": "Sauvegarde & Restauration",
+    "backupDatabase": "Sauvegarder la Base de Données",
+    "backupDescription": "Exporter toute votre base de données vers un fichier JSON. Cela inclut tous les projets, entrées de temps, tâches et paramètres.",
+    "restoreDatabase": "Restaurer la Base de Données",
+    "restoreDescription": "Restaurer votre base de données à partir d'un fichier JSON précédemment exporté. Cela remplacera toutes les données actuelles.",
+    "backupSuccess": "Base de données sauvegardée avec succès !",
+    "restoreSuccess": "Base de données restaurée avec succès !",
+    "backupError": "Erreur lors de la création de la sauvegarde",
+    "restoreError": "Erreur lors de la restauration de la base de données",
+    "confirmRestore": "Êtes-vous sûr de vouloir restaurer la base de données ? Cela remplacera toutes les données actuelles et ne peut pas être annulé.",
+    "selectBackupFile": "Sélectionner le fichier de sauvegarde à restaurer"
   },
   "common": {
     "save": "Enregistrer",
@@ -216,7 +247,9 @@
     "back": "Retour",
     "unknown": "Inconnu",
     "status": "Statut",
-    "actions": "Actions"
+    "actions": "Actions",
+    "add": "Ajouter",
+    "results": "résultats"
   },
   "presence": {
     "title": "Présence Bureau",

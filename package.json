@@ -1,14 +1,16 @@
 {
   "name": "project-time-tracker",
-  "version": "1.0.10",
+  "version": "1.0.15",
   "description": "Simple time tracking per project",
   "main": "src/main.js",
   "homepage": "./",
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
+    "build:web": "webpack --config webpack.web.config.js",
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=1 electron .",
+    "electron-demo": "electron . --demo_mode",
     "update-version": "node scripts/update-version.js",
     "predist": "npm run update-version",
     "dist": "electron-builder",
@@ -22,7 +24,8 @@
     "test:integration": "node tests/comprehensive-timer-tests.js",
     "test:timer": "node tests/timer-tests.js",
     "test:sync": "node tests/timer-sync-tests.js",
-    "test:mcp": "node tests/test-http-mcp-server.js"
+    "test:mcp": "node tests/test-http-mcp-server.js",
+    "test:demo": "node tests/test-demo-mode.js"
   },
   "build": {
     "appId": "com.doumdi.project-time-tracker",
@@ -67,6 +70,7 @@
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
+    "sql.js": "^1.13.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

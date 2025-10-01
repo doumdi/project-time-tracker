@@ -57,11 +57,11 @@ When you need to modify the database schema:
 1. **Increment Database Version**:
    ```javascript
    // In src/database/db.js
-   const CURRENT_DB_VERSION = 5; // Increment this
+   const CURRENT_DB_VERSION = 6; // Increment this
    ```
 
 2. **Create New Migration File**:
-   Create a new file `src/database/upgrades/v5.js`:
+   Create a new file `src/database/upgrades/v6.js`:
    ```javascript
    /**
     * Database Migration v5: Add project status tracking
@@ -190,6 +190,8 @@ useEffect(() => {
   - `v3.js`: Add start_date and end_date columns to projects
   - `v4.js`: Add BLE devices and office presence tables
   - `v5.js`: Add tasks table with project association and time tracking
+  - `v6.js`: Make project_id mandatory for tasks and add subtasks table
+  - `v7.js`: Add task_id and subtask_id to time_entries for detailed time tracking
 - `src/main.js`: IPC handlers for version functions
 - `src/preload.js`: Frontend API exposure
 - `src/components/Settings.js`: Version display in UI

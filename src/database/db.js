@@ -14,14 +14,17 @@ try {
 }
 
 // Current database version - increment this when schema changes
-const CURRENT_DB_VERSION = 5;
+const CURRENT_DB_VERSION = 7;
+
+// Demo mode flag - set by setDemoMode() function
+let isDemoMode = false;
 
 // Get user data directory for database storage
 const userDataPath = app ? app.getPath('userData') : path.join(__dirname, '../../data');
 const dbPath = path.join(userDataPath, 'timetracker.db');
 
-// Ensure data directory exists
-if (!fs.existsSync(userDataPath)) {
+// Ensure data directory exists (skip in demo mode)
+if (!isDemoMode && !fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath, { recursive: true });
 }
 
@@ -58,6 +61,14 @@ function closeDatabase() {
   });
 }
 
+// Set demo mode - must be called before initDatabase
+function setDemoMode(enabled) {
+  isDemoMode = enabled;
+  if (enabled) {
+    console.log('[DEMO MODE] Database will use in-memory storage');
+  }
+}
+
 // Initialize database
 function initDatabase() {
   if (isInitialized) {
@@ -65,17 +76,24 @@ function initDatabase() {
   }
   
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, async (err) => {
+    // Use in-memory database for demo mode, file-based for normal mode
+    const databasePath = isDemoMode ? ':memory:' : dbPath;
+    const modeLabel = isDemoMode ? 'in-memory (DEMO MODE)' : `file at ${dbPath}`;
+    
+    db = new sqlite3.Database(databasePath, async (err) => {
       if (err) {
         console.error('Error opening database:', err);
         reject(err);
       } else {
-        console.log('Connected to SQLite database at:', dbPath);
+        console.log(`Connected to SQLite database ${modeLabel}`);
         try {
           await createTables();
-          const upgradeOccurred = await runMigrations();
-          if (upgradeOccurred) {
-            console.log('Database has been upgraded to the latest version.');
+          // Skip migrations in demo mode (in-memory database starts fresh)
+          if (!isDemoMode) {
+            const upgradeOccurred = await runMigrations();
+            if (upgradeOccurred) {
+              console.log('Database has been upgraded to the latest version.');
+            }
           }
           isInitialized = true;
           resolve();
@@ -99,7 +117,20 @@ function createTables() {
       )
     `;
 
-    const createProjectsTable = `
+    // In demo mode, include all columns that migrations would add
+    const createProjectsTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        color TEXT DEFAULT '#4CAF50',
+        budget DECIMAL(10,2) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -110,17 +141,101 @@ function createTables() {
       )
     `;
 
-    const createTimeEntriesTable = `
+    const createTimeEntriesTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS time_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        task_id INTEGER,
+        subtask_id INTEGER,
+        description TEXT,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL,
+        FOREIGN KEY (subtask_id) REFERENCES subtasks (id) ON DELETE SET NULL
+      )
+    ` : `
       CREATE TABLE IF NOT EXISTS time_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
         description TEXT,
         start_time DATETIME NOT NULL,
         end_time DATETIME,
-        duration INTEGER, -- Duration in minutes
+        duration INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    `;
+    
+    // BLE devices table (from v4 migration)
+    const createBleDevicesTable = `
+      CREATE TABLE IF NOT EXISTS ble_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        mac_address TEXT UNIQUE NOT NULL,
+        device_type TEXT DEFAULT 'unknown',
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    // Office presence table (from v4 migration)
+    const createOfficePresenceTable = `
+      CREATE TABLE IF NOT EXISTS office_presence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATE NOT NULL,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME,
+        duration INTEGER NOT NULL,
+        device_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (device_id) REFERENCES ble_devices (id) ON DELETE SET NULL
+      )
+    `;
+    
+    // Tasks table (from v5 migration, updated in v6)
+    const createTasksTable = isDemoMode ? `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        due_date DATE,
+        project_id INTEGER NOT NULL,
+        allocated_time INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    ` : `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        due_date DATE,
+        project_id INTEGER,
+        allocated_time INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+      )
+    `;
+    
+    // Subtasks table (from v6 migration)
+    const createSubtasksTable = `
+      CREATE TABLE IF NOT EXISTS subtasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        parent_task_id INTEGER NOT NULL,
+        is_completed BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
       )
     `;
 
@@ -145,6 +260,39 @@ function createTables() {
       db.run(createTimeEntriesTable, (err) => {
         if (err) {
           console.error('Error creating time_entries table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      // Create BLE and task tables (needed for demo mode and v4/v5 migrations)
+      db.run(createBleDevicesTable, (err) => {
+        if (err) {
+          console.error('Error creating ble_devices table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createOfficePresenceTable, (err) => {
+        if (err) {
+          console.error('Error creating office_presence table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createTasksTable, (err) => {
+        if (err) {
+          console.error('Error creating tasks table:', err);
+          reject(err);
+          return;
+        }
+      });
+      
+      db.run(createSubtasksTable, (err) => {
+        if (err) {
+          console.error('Error creating subtasks table:', err);
           reject(err);
           return;
         }
@@ -395,9 +543,11 @@ function getTimeEntries(filters = {}) {
 
 function addTimeEntry(entry) {
   return new Promise((resolve, reject) => {
-    const sql = 'INSERT INTO time_entries (project_id, description, start_time, end_time, duration) VALUES (?, ?, ?, ?, ?)';
+    const sql = 'INSERT INTO time_entries (project_id, task_id, subtask_id, description, start_time, end_time, duration) VALUES (?, ?, ?, ?, ?, ?, ?)';
     const params = [
       entry.project_id,
+      entry.task_id || null,
+      entry.subtask_id || null,
       entry.description || '',
       entry.start_time,
       entry.end_time,
@@ -416,9 +566,11 @@ function addTimeEntry(entry) {
 
 function updateTimeEntry(entry) {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE time_entries SET project_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const sql = 'UPDATE time_entries SET project_id = ?, task_id = ?, subtask_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     const params = [
       entry.project_id,
+      entry.task_id || null,
+      entry.subtask_id || null,
       entry.description,
       entry.start_time,
       entry.end_time,
@@ -811,11 +963,17 @@ function getTasks(filters = {}) {
 
 function addTask(task) {
   return new Promise((resolve, reject) => {
+    // Validate that project_id is provided (mandatory as of v6)
+    if (!task.project_id) {
+      reject(new Error('project_id is required for creating a task'));
+      return;
+    }
+    
     const sql = 'INSERT INTO tasks (name, due_date, project_id, allocated_time) VALUES (?, ?, ?, ?)';
     const params = [
       task.name,
       task.due_date || null,
-      task.project_id || null,
+      task.project_id,
       task.allocated_time || 0
     ];
     
@@ -831,11 +989,17 @@ function addTask(task) {
 
 function updateTask(task) {
   return new Promise((resolve, reject) => {
+    // Validate that project_id is provided (mandatory as of v6)
+    if (!task.project_id) {
+      reject(new Error('project_id is required for updating a task'));
+      return;
+    }
+    
     const sql = 'UPDATE tasks SET name = ?, due_date = ?, project_id = ?, allocated_time = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     const params = [
       task.name,
       task.due_date || null,
-      task.project_id || null,
+      task.project_id,
       task.allocated_time || 0,
       task.is_active ? 1 : 0,
       task.id
@@ -854,6 +1018,91 @@ function updateTask(task) {
 function deleteTask(id) {
   return new Promise((resolve, reject) => {
     const sql = 'DELETE FROM tasks WHERE id = ?';
+    
+    db.run(sql, [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ deleted: this.changes > 0 });
+      }
+    });
+  });
+}
+
+// Subtask operations
+function getSubTasks(parentTaskId) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT * FROM subtasks 
+      WHERE parent_task_id = ?
+      ORDER BY created_at ASC
+    `;
+    
+    db.all(sql, [parentTaskId], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows.map(row => ({
+          ...row,
+          is_completed: Boolean(row.is_completed)
+        })));
+      }
+    });
+  });
+}
+
+function addSubTask(subTask) {
+  return new Promise((resolve, reject) => {
+    // Validate that parent_task_id is provided
+    if (!subTask.parent_task_id) {
+      reject(new Error('parent_task_id is required for creating a subtask'));
+      return;
+    }
+    
+    const sql = 'INSERT INTO subtasks (name, parent_task_id, is_completed) VALUES (?, ?, ?)';
+    const params = [
+      subTask.name,
+      subTask.parent_task_id,
+      subTask.is_completed ? 1 : 0
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ 
+          id: this.lastID, 
+          name: subTask.name,
+          parent_task_id: subTask.parent_task_id,
+          is_completed: Boolean(subTask.is_completed)
+        });
+      }
+    });
+  });
+}
+
+function updateSubTask(subTask) {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE subtasks SET name = ?, is_completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    const params = [
+      subTask.name,
+      subTask.is_completed ? 1 : 0,
+      subTask.id
+    ];
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(subTask);
+      }
+    });
+  });
+}
+
+function deleteSubTask(id) {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM subtasks WHERE id = ?';
     
     db.run(sql, [id], function(err) {
       if (err) {
@@ -912,18 +1161,197 @@ function getActiveTask() {
   });
 }
 
-// Initialize database when module is loaded
-if (app && app.isReady()) {
+// Backup and restore functions
+function exportToJSON() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const backup = {
+        version: CURRENT_DB_VERSION,
+        appVersion: appVersion,
+        exportDate: new Date().toISOString(),
+        data: {}
+      };
+
+      // Get all data from each table
+      const tables = [
+        'app_metadata',
+        'projects',
+        'time_entries',
+        'ble_devices',
+        'office_presence',
+        'tasks',
+        'subtasks'
+      ];
+
+      for (const table of tables) {
+        await new Promise((resolveTable, rejectTable) => {
+          db.all(`SELECT * FROM ${table}`, [], (err, rows) => {
+            if (err) {
+              // Table might not exist in older databases
+              console.warn(`Could not export table ${table}:`, err.message);
+              backup.data[table] = [];
+              resolveTable();
+            } else {
+              backup.data[table] = rows || [];
+              resolveTable();
+            }
+          });
+        });
+      }
+
+      resolve(backup);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function importFromJSON(backupData) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!backupData || !backupData.data) {
+        throw new Error('Invalid backup data format');
+      }
+
+      // Disable foreign key constraints temporarily for clean import
+      await new Promise((res, rej) => {
+        db.run('PRAGMA foreign_keys = OFF', (err) => {
+          if (err) rej(err);
+          else res();
+        });
+      });
+
+      // Begin transaction
+      await new Promise((res, rej) => {
+        db.run('BEGIN TRANSACTION', (err) => {
+          if (err) rej(err);
+          else res();
+        });
+      });
+
+      try {
+        // Clear existing data (except app_metadata which we'll handle specially)
+        const clearTables = [
+          'subtasks',
+          'time_entries',
+          'tasks',
+          'office_presence',
+          'ble_devices',
+          'projects'
+        ];
+
+        for (const table of clearTables) {
+          await new Promise((res, rej) => {
+            db.run(`DELETE FROM ${table}`, [], (err) => {
+              if (err) {
+                console.warn(`Could not clear table ${table}:`, err.message);
+              }
+              res(); // Continue even if table doesn't exist
+            });
+          });
+        }
+
+        // Import data for each table
+        const importOrder = [
+          'projects',
+          'ble_devices',
+          'tasks',
+          'subtasks',
+          'time_entries',
+          'office_presence'
+        ];
+
+        for (const table of importOrder) {
+          const rows = backupData.data[table] || [];
+          
+          if (rows.length === 0) continue;
+
+          // Get column names from the first row
+          const columns = Object.keys(rows[0]);
+          const placeholders = columns.map(() => '?').join(',');
+          const sql = `INSERT INTO ${table} (${columns.join(',')}) VALUES (${placeholders})`;
+
+          for (const row of rows) {
+            const values = columns.map(col => row[col]);
+            await new Promise((res, rej) => {
+              db.run(sql, values, (err) => {
+                if (err) {
+                  console.error(`Error importing row to ${table}:`, err.message);
+                  rej(err);
+                } else {
+                  res();
+                }
+              });
+            });
+          }
+        }
+
+        // Import app_metadata (but preserve current database version)
+        if (backupData.data.app_metadata) {
+          for (const row of backupData.data.app_metadata) {
+            // Skip database_version to maintain current schema version
+            if (row.key === 'database_version') continue;
+            
+            await new Promise((res, rej) => {
+              const sql = `INSERT OR REPLACE INTO app_metadata (key, value, updated_at) VALUES (?, ?, ?)`;
+              db.run(sql, [row.key, row.value, row.updated_at], (err) => {
+                if (err) rej(err);
+                else res();
+              });
+            });
+          }
+        }
+
+        // Commit transaction
+        await new Promise((res, rej) => {
+          db.run('COMMIT', (err) => {
+            if (err) rej(err);
+            else res();
+          });
+        });
+
+        // Re-enable foreign key constraints
+        await new Promise((res, rej) => {
+          db.run('PRAGMA foreign_keys = ON', (err) => {
+            if (err) rej(err);
+            else res();
+          });
+        });
+
+        resolve({ success: true, message: 'Database restored successfully' });
+      } catch (err) {
+        // Rollback on error
+        await new Promise((res) => {
+          db.run('ROLLBACK', () => res());
+        });
+        
+        // Re-enable foreign key constraints
+        await new Promise((res) => {
+          db.run('PRAGMA foreign_keys = ON', () => res());
+        });
+        
+        throw err;
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+// Initialize database when module is loaded (skip in demo mode, will be initialized manually)
+if (!isDemoMode && app && app.isReady()) {
   initDatabase();
-} else if (app) {
+} else if (!isDemoMode && app) {
   app.whenReady().then(initDatabase);
-} else {
+} else if (!isDemoMode) {
   // For testing or non-electron environments
   initDatabase();
 }
 
 module.exports = {
   initDatabase,
+  setDemoMode,
+  closeDatabase,
   getProjects,
   addProject,
   updateProject,
@@ -950,5 +1378,11 @@ module.exports = {
   updateTask,
   deleteTask,
   setActiveTask,
-  getActiveTask
+  getActiveTask,
+  getSubTasks,
+  addSubTask,
+  updateSubTask,
+  deleteSubTask,
+  exportToJSON,
+  importFromJSON
 };

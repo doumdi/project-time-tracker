@@ -15,6 +15,11 @@ const TasksView = ({ projects, onRefresh }) => {
     allocated_time: ''
   });
   const [activeTaskStartTime, setActiveTaskStartTime] = useState(null);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [expandedTasks, setExpandedTasks] = useState(new Set());
+  const [subtasks, setSubtasks] = useState({});
+  const [addingSubtaskFor, setAddingSubtaskFor] = useState(null);
+  const [subtaskName, setSubtaskName] = useState('');
 
   useEffect(() => {
     loadTasks();
@@ -58,11 +63,16 @@ const TasksView = ({ projects, onRefresh }) => {
       return;
     }
 
+    if (!formData.project_id) {
+      alert(t('tasks.selectProjectForTimeEntry'));
+      return;
+    }
+
     try {
       const taskData = {
         name: formData.name.trim(),
         due_date: formData.due_date || null,
-        project_id: formData.project_id ? parseInt(formData.project_id) : null,
+        project_id: parseInt(formData.project_id),
         allocated_time: formData.allocated_time ? parseInt(formData.allocated_time) : 0
       };
 
@@ -147,6 +157,38 @@ const TasksView = ({ projects, onRefresh }) => {
     }
   };
 
+  const handleStartSubtask = async (subtask, task) => {
+    try {
+      // Check if task has a project for time tracking
+      if (!task.project_id) {
+        alert(t('tasks.selectProjectForTimeEntry'));
+        return;
+      }
+
+      // Set the parent task as active
+      await window.electronAPI.setActiveTask(task.id);
+      
+      // Save timer data to localStorage with task/subtask description
+      const timerData = {
+        isTracking: true,
+        startTime: Date.now(),
+        selectedProject: task.project_id,
+        description: `${task.name}/${subtask.name}`,
+        taskId: task.id,
+        subtaskId: subtask.id
+      };
+      localStorage.setItem('activeTimer', JSON.stringify(timerData));
+      
+      setActiveTask(task);
+      setActiveTaskStartTime(Date.now());
+      loadTasks();
+      alert(t('tasks.taskStarted'));
+    } catch (error) {
+      console.error('Error starting subtask:', error);
+      alert(t('tasks.errorStarting'));
+    }
+  };
+
   const handleStopTask = async () => {
     if (!activeTask || !activeTaskStartTime) return;
 
@@ -192,6 +234,133 @@ const TasksView = ({ projects, onRefresh }) => {
     setEditingTask(null);
     setIsCreateFormOpen(false);
   };
+
+  // Subtask functions
+  const toggleTaskExpand = async (taskId) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+      // Load subtasks if not already loaded
+      if (!subtasks[taskId]) {
+        await loadSubtasks(taskId);
+      }
+    }
+    setExpandedTasks(newExpanded);
+  };
+
+  const loadSubtasks = async (taskId) => {
+    try {
+      const taskSubtasks = await window.electronAPI.getSubTasks(taskId);
+      setSubtasks(prev => ({ ...prev, [taskId]: taskSubtasks }));
+    } catch (error) {
+      console.error('Error loading subtasks:', error);
+    }
+  };
+
+  const handleAddSubtask = async (taskId) => {
+    if (!subtaskName.trim()) {
+      alert(t('tasks.taskNameRequired'));
+      return;
+    }
+
+    try {
+      await window.electronAPI.addSubTask({
+        name: subtaskName.trim(),
+        parent_task_id: taskId,
+        is_completed: false
+      });
+      
+      setSubtaskName('');
+      setAddingSubtaskFor(null);
+      await loadSubtasks(taskId);
+      alert(t('tasks.subtaskCreated'));
+    } catch (error) {
+      console.error('Error adding subtask:', error);
+      alert(t('tasks.errorCreatingSubtask'));
+    }
+  };
+
+  const handleToggleSubtaskComplete = async (subtask, taskId) => {
+    try {
+      await window.electronAPI.updateSubTask({
+        id: subtask.id,
+        name: subtask.name,
+        is_completed: !subtask.is_completed
+      });
+      
+      await loadSubtasks(taskId);
+      alert(t('tasks.subtaskUpdated'));
+    } catch (error) {
+      console.error('Error updating subtask:', error);
+      alert(t('tasks.errorUpdatingSubtask'));
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId, taskId) => {
+    if (!window.confirm(t('tasks.confirmDeleteSubtask'))) return;
+
+    try {
+      await window.electronAPI.deleteSubTask(subtaskId);
+      await loadSubtasks(taskId);
+      alert(t('tasks.subtaskDeleted'));
+    } catch (error) {
+      console.error('Error deleting subtask:', error);
+      alert(t('tasks.errorDeletingSubtask'));
+    }
+  };
+
+  // Filter tasks based on search - also includes subtasks matching the filter
+  const filteredTasks = tasks.filter(task => {
+    if (!searchFilter.trim()) return true;
+    
+    const searchLower = searchFilter.toLowerCase();
+    
+    // Check if task name matches
+    if (task.name.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    
+    // Check if any subtask name matches
+    const taskSubtasks = subtasks[task.id] || [];
+    return taskSubtasks.some(subtask => 
+      subtask.name.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Load and expand tasks when searching to show matching subtasks
+  useEffect(() => {
+    if (searchFilter.trim()) {
+      const searchLower = searchFilter.toLowerCase();
+      
+      // Load subtasks for all filtered tasks if not already loaded
+      filteredTasks.forEach(task => {
+        if (!subtasks[task.id]) {
+          loadSubtasks(task.id);
+        }
+      });
+      
+      // After a brief delay to allow subtasks to load, auto-expand tasks with matching subtasks
+      const timer = setTimeout(() => {
+        const tasksToExpand = new Set(expandedTasks);
+        
+        filteredTasks.forEach(task => {
+          // If task name doesn't match but the task is in filtered results, it has matching subtasks
+          if (!task.name.toLowerCase().includes(searchLower)) {
+            const taskSubtasks = subtasks[task.id] || [];
+            if (taskSubtasks.some(s => s.name.toLowerCase().includes(searchLower))) {
+              tasksToExpand.add(task.id);
+            }
+          }
+        });
+        
+        setExpandedTasks(tasksToExpand);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchFilter]);
 
   const getTaskStatus = (task) => {
     if (task.is_active) return 'active';
@@ -378,12 +547,13 @@ const TasksView = ({ projects, onRefresh }) => {
               {/* Project Selection - Full Width */}
               <div style={{ marginBottom: '2rem' }}>
                 <label className="form-label" style={{ fontSize: '1rem', fontWeight: '600' }}>
-                  {t('tasks.project')}
+                  {t('tasks.project')} <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <select
                   className="form-control"
                   value={formData.project_id}
                   onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+                  required
                   style={{ 
                     fontSize: '1rem', 
                     padding: '1rem',
@@ -422,8 +592,31 @@ const TasksView = ({ projects, onRefresh }) => {
           </div>
         )}
 
+        {/* Search Filter */}
+        {tasks.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder={t('tasks.searchTasks')}
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              style={{
+                fontSize: '1rem',
+                padding: '0.75rem 1rem',
+                border: '2px solid #e1e5e9',
+                borderRadius: '8px',
+                maxWidth: '500px'
+              }}
+            />
+            <small style={{ display: 'block', marginTop: '0.5rem', color: '#666' }}>
+              {searchFilter ? `${filteredTasks.length} ${t('common.results')}` : t('tasks.showingAllTasks')}
+            </small>
+          </div>
+        )}
+
         {/* Tasks List */}
-        {tasks.length > 0 ? (
+        {filteredTasks.length > 0 ? (
           <div style={{ 
             background: 'white',
             borderRadius: '12px',
@@ -458,139 +651,307 @@ const TasksView = ({ projects, onRefresh }) => {
                 </tr>
               </thead>
               <tbody>
-                {tasks.map(task => {
+                {filteredTasks.map(task => {
                   const status = getTaskStatus(task);
+                  const isExpanded = expandedTasks.has(task.id);
+                  const taskSubtasks = subtasks[task.id] || [];
+                  
                   return (
-                    <tr key={task.id} style={{ 
-                      background: task.is_active ? 'linear-gradient(135deg, #f0f8f0 0%, #e8f5e8 100%)' : 'transparent',
-                      borderLeft: task.is_active ? '4px solid #4CAF50' : '4px solid transparent'
-                    }}>
-                      <td style={{ padding: '1.2rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ fontSize: '1rem' }}>{task.name}</strong>
-                          {task.is_active && (
-                            <span style={{ 
-                              background: '#4CAF50',
-                              color: 'white',
-                              fontSize: '0.7rem',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {t('tasks.active')}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem' }}>
-                        {task.project_name ? (
+                    <React.Fragment key={task.id}>
+                      <tr style={{ 
+                        background: task.is_active ? 'linear-gradient(135deg, #f0f8f0 0%, #e8f5e8 100%)' : 'transparent',
+                        borderLeft: task.is_active ? '4px solid #4CAF50' : '4px solid transparent'
+                      }}>
+                        <td style={{ padding: '1.2rem 1rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div 
-                              style={{ 
-                                width: '12px',
-                                height: '12px',
-                                borderRadius: '50%',
-                                background: task.project_color || '#666'
+                            <button
+                              onClick={() => toggleTaskExpand(task.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '1.2rem',
+                                padding: '0',
+                                marginRight: '0.3rem'
                               }}
-                            />
-                            <span style={{ 
-                              fontWeight: '500',
-                              fontSize: '0.95rem'
-                            }}>
-                              {task.project_name}
-                            </span>
+                            >
+                              {isExpanded ? '▼' : '▶'}
+                            </button>
+                            <strong style={{ fontSize: '1rem' }}>{task.name}</strong>
+                            {task.is_active && (
+                              <span style={{ 
+                                background: '#4CAF50',
+                                color: 'white',
+                                fontSize: '0.7rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '12px',
+                                fontWeight: 'bold'
+                              }}>
+                                {t('tasks.active')}
+                              </span>
+                            )}
+                            {taskSubtasks.length > 0 && (
+                              <span style={{
+                                background: '#667eea',
+                                color: 'white',
+                                fontSize: '0.7rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '12px',
+                                fontWeight: 'bold'
+                              }}>
+                                {taskSubtasks.filter(s => s.is_completed).length}/{taskSubtasks.length} ✓
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <span style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                            {t('tasks.noProject')}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
-                        {task.due_date ? format(parseISO(task.due_date), 'MMM dd, yyyy') : '-'}
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
-                        {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: '500' }}>
-                            {task.cumulated_time > 0 ? `${Math.floor(task.cumulated_time / 60)}h ${task.cumulated_time % 60}m` : '0 min'}
-                          </span>
-                          {task.allocated_time > 0 && (
-                            <div style={{
-                              width: '60px',
-                              height: '8px',
-                              background: '#e1e5e9',
-                              borderRadius: '4px',
-                              position: 'relative',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                width: `${Math.min(100, (task.cumulated_time / task.allocated_time) * 100)}%`,
-                                height: '100%',
-                                background: task.cumulated_time > task.allocated_time ? '#f44336' : 
-                                          task.cumulated_time > task.allocated_time * 0.8 ? '#ff9800' : '#4CAF50',
-                                borderRadius: '4px'
-                              }} />
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem' }}>
+                          {task.project_name ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div 
+                                style={{ 
+                                  width: '12px',
+                                  height: '12px',
+                                  borderRadius: '50%',
+                                  background: task.project_color || '#666'
+                                }}
+                              />
+                              <span style={{ 
+                                fontWeight: '500',
+                                fontSize: '0.95rem'
+                              }}>
+                                {task.project_name}
+                              </span>
                             </div>
+                          ) : (
+                            <span style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                              {t('tasks.noProject')}
+                            </span>
                           )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem' }}>
-                        <span style={{ 
-                          color: getStatusColor(status),
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem',
-                          background: status === 'overdue' ? 'rgba(244, 67, 54, 0.1)' : 
-                                     status === 'due-soon' ? 'rgba(255, 152, 0, 0.1)' :
-                                     status === 'active' ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                          padding: '0.3rem 0.6rem',
-                          borderRadius: '12px',
-                          border: status !== 'normal' && status !== 'no-due-date' ? 
-                                 `1px solid ${getStatusColor(status)}40` : 'none'
-                        }}>
-                          {getStatusLabel(status)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1.2rem 1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          {!task.is_active && task.project_id && (
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
+                          {task.due_date ? format(parseISO(task.due_date), 'MMM dd, yyyy') : '-'}
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
+                          {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem', fontSize: '0.95rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontWeight: '500' }}>
+                              {task.cumulated_time > 0 ? `${Math.floor(task.cumulated_time / 60)}h ${task.cumulated_time % 60}m` : '0 min'}
+                            </span>
+                            {task.allocated_time > 0 && (
+                              <div style={{
+                                width: '60px',
+                                height: '8px',
+                                background: '#e1e5e9',
+                                borderRadius: '4px',
+                                position: 'relative',
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{
+                                  width: `${Math.min(100, (task.cumulated_time / task.allocated_time) * 100)}%`,
+                                  height: '100%',
+                                  background: task.cumulated_time > task.allocated_time ? '#f44336' : 
+                                            task.cumulated_time > task.allocated_time * 0.8 ? '#ff9800' : '#4CAF50',
+                                  borderRadius: '4px'
+                                }} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem' }}>
+                          <span style={{ 
+                            color: getStatusColor(status),
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            background: status === 'overdue' ? 'rgba(244, 67, 54, 0.1)' : 
+                                       status === 'due-soon' ? 'rgba(255, 152, 0, 0.1)' :
+                                       status === 'active' ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                            padding: '0.3rem 0.6rem',
+                            borderRadius: '12px',
+                            border: status !== 'normal' && status !== 'no-due-date' ? 
+                                   `1px solid ${getStatusColor(status)}40` : 'none'
+                          }}>
+                            {getStatusLabel(status)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '1.2rem 1rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {!task.is_active && task.project_id && (
+                              <button 
+                                className="btn btn-small btn-success"
+                                onClick={() => handleStartTask(task)}
+                                disabled={activeTask !== null}
+                                style={{ 
+                                  fontSize: '0.8rem',
+                                  padding: '0.4rem 0.8rem'
+                                }}
+                              >
+                                ▶️ {t('tasks.startTask')}
+                              </button>
+                            )}
                             <button 
-                              className="btn btn-small btn-success"
-                              onClick={() => handleStartTask(task)}
-                              disabled={activeTask !== null}
+                              className="btn btn-small btn-secondary"
+                              onClick={() => handleEdit(task)}
                               style={{ 
                                 fontSize: '0.8rem',
                                 padding: '0.4rem 0.8rem'
                               }}
                             >
-                              ▶️ {t('tasks.startTask')}
+                              ✏️ {t('common.edit')}
                             </button>
-                          )}
-                          <button 
-                            className="btn btn-small btn-secondary"
-                            onClick={() => handleEdit(task)}
-                            style={{ 
-                              fontSize: '0.8rem',
-                              padding: '0.4rem 0.8rem'
-                            }}
-                          >
-                            ✏️ {t('common.edit')}
-                          </button>
-                          <button 
-                            className="btn btn-small btn-danger"
-                            onClick={() => handleDelete(task)}
-                            style={{ 
-                              fontSize: '0.8rem',
-                              padding: '0.4rem 0.8rem'
-                            }}
-                          >
-                            🗑️ {t('common.delete')}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            <button 
+                              className="btn btn-small btn-danger"
+                              onClick={() => handleDelete(task)}
+                              style={{ 
+                                fontSize: '0.8rem',
+                                padding: '0.4rem 0.8rem'
+                              }}
+                            >
+                              🗑️ {t('common.delete')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      {/* Subtasks Section */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '0', background: '#f8f9fa' }}>
+                            <div style={{ padding: '1.5rem 2rem' }}>
+                              <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#667eea' }}>
+                                📋 {t('tasks.subtasks')}
+                              </h4>
+                              
+                              {/* Subtasks List */}
+                              {taskSubtasks.length > 0 ? (
+                                <div style={{ marginBottom: '1rem' }}>
+                                  {taskSubtasks.map(subtask => (
+                                    <div 
+                                      key={subtask.id}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem',
+                                        background: 'white',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.5rem',
+                                        border: '1px solid #e1e5e9'
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={subtask.is_completed}
+                                        onChange={() => handleToggleSubtaskComplete(subtask, task.id)}
+                                        style={{
+                                          width: '18px',
+                                          height: '18px',
+                                          cursor: 'pointer'
+                                        }}
+                                      />
+                                      <span style={{
+                                        flex: 1,
+                                        textDecoration: subtask.is_completed ? 'line-through' : 'none',
+                                        color: subtask.is_completed ? '#999' : '#333',
+                                        fontSize: '0.95rem'
+                                      }}>
+                                        {subtask.name}
+                                      </span>
+                                      {!task.is_active && (
+                                        <button
+                                          className="btn btn-small btn-success"
+                                          onClick={() => handleStartSubtask(subtask, task)}
+                                          disabled={activeTask !== null}
+                                          style={{
+                                            fontSize: '0.75rem',
+                                            padding: '0.3rem 0.6rem'
+                                          }}
+                                        >
+                                          ▶️ {t('tasks.startTask')}
+                                        </button>
+                                      )}
+                                      <button
+                                        className="btn btn-small btn-danger"
+                                        onClick={() => handleDeleteSubtask(subtask.id, task.id)}
+                                        style={{
+                                          fontSize: '0.75rem',
+                                          padding: '0.3rem 0.6rem'
+                                        }}
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p style={{ color: '#999', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                                  {t('tasks.noSubtasks')}
+                                </p>
+                              )}
+                              
+                              {/* Add Subtask Form */}
+                              {addingSubtaskFor === task.id ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder={t('tasks.subtaskNamePlaceholder')}
+                                    value={subtaskName}
+                                    onChange={(e) => setSubtaskName(e.target.value)}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleAddSubtask(task.id);
+                                      }
+                                    }}
+                                    autoFocus
+                                    style={{
+                                      fontSize: '0.9rem',
+                                      padding: '0.5rem',
+                                      flex: 1
+                                    }}
+                                  />
+                                  <button
+                                    className="btn btn-small btn-primary"
+                                    onClick={() => handleAddSubtask(task.id)}
+                                    style={{
+                                      fontSize: '0.8rem',
+                                      padding: '0.5rem 1rem'
+                                    }}
+                                  >
+                                    ✅ {t('common.add')}
+                                  </button>
+                                  <button
+                                    className="btn btn-small btn-secondary"
+                                    onClick={() => {
+                                      setAddingSubtaskFor(null);
+                                      setSubtaskName('');
+                                    }}
+                                    style={{
+                                      fontSize: '0.8rem',
+                                      padding: '0.5rem 1rem'
+                                    }}
+                                  >
+                                    ❌ {t('common.cancel')}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  className="btn btn-small btn-primary"
+                                  onClick={() => setAddingSubtaskFor(task.id)}
+                                  style={{
+                                    fontSize: '0.85rem',
+                                    padding: '0.5rem 1rem'
+                                  }}
+                                >
+                                  ➕ {t('tasks.addSubtask')}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

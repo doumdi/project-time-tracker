@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDatabaseVersion: () => ipcRenderer.invoke('get-database-version'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   
+  // Backup and restore operations
+  exportDatabase: () => ipcRenderer.invoke('export-database'),
+  importDatabase: (backupData) => ipcRenderer.invoke('import-database', backupData),
+  showSaveDialogBackup: () => ipcRenderer.invoke('show-save-dialog-backup'),
+  showOpenDialogRestore: () => ipcRenderer.invoke('show-open-dialog-restore'),
+  
   // BLE device operations
   getBleDevices: () => ipcRenderer.invoke('get-ble-devices'),
   addBleDevice: (device) => ipcRenderer.invoke('add-ble-device', device),
@@ -43,6 +49,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
   setActiveTask: (taskId) => ipcRenderer.invoke('set-active-task', taskId),
   getActiveTask: () => ipcRenderer.invoke('get-active-task'),
+  
+  // Subtask operations
+  getSubTasks: (parentTaskId) => ipcRenderer.invoke('get-subtasks', parentTaskId),
+  addSubTask: (subtask) => ipcRenderer.invoke('add-subtask', subtask),
+  updateSubTask: (subtask) => ipcRenderer.invoke('update-subtask', subtask),
+  deleteSubTask: (id) => ipcRenderer.invoke('delete-subtask', id),
   
   // BLE scanning operations
   startBleScan: () => ipcRenderer.invoke('start-ble-scan'),

@@ -8,7 +8,9 @@ const ProjectManager = ({ projects, onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [subtasks, setSubtasks] = useState({});
   const [expandedProjects, setExpandedProjects] = useState(new Set());
+  const [expandedTasks, setExpandedTasks] = useState(new Set());
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -45,6 +47,29 @@ const ProjectManager = ({ projects, onRefresh }) => {
       newExpanded.add(projectId);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  const toggleTaskExpansion = async (taskId) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+      // Load subtasks if not already loaded
+      if (!subtasks[taskId]) {
+        await loadSubtasks(taskId);
+      }
+    }
+    setExpandedTasks(newExpanded);
+  };
+
+  const loadSubtasks = async (taskId) => {
+    try {
+      const taskSubtasks = await window.electronAPI.getSubTasks(taskId);
+      setSubtasks(prev => ({ ...prev, [taskId]: taskSubtasks }));
+    } catch (error) {
+      console.error('Error loading subtasks:', error);
+    }
   };
 
   const getProjectTasks = (projectId) => {
@@ -332,10 +357,11 @@ const ProjectManager = ({ projects, onRefresh }) => {
                           <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>
                             Project Tasks ({projectTasks.length})
                           </h4>
-                          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                             <table style={{ width: '100%', fontSize: '0.9rem' }}>
                               <thead>
                                 <tr style={{ background: '#e9ecef' }}>
+                                  <th style={{ padding: '0.5rem', textAlign: 'left', width: '30px' }}></th>
                                   <th style={{ padding: '0.5rem', textAlign: 'left' }}>Task Name</th>
                                   <th style={{ padding: '0.5rem', textAlign: 'left' }}>Due Date</th>
                                   <th style={{ padding: '0.5rem', textAlign: 'left' }}>Allocated Time</th>
@@ -343,28 +369,82 @@ const ProjectManager = ({ projects, onRefresh }) => {
                                 </tr>
                               </thead>
                               <tbody>
-                                {projectTasks.map(task => (
-                                  <tr key={task.id}>
-                                    <td style={{ padding: '0.5rem' }}>
-                                      {task.name}
-                                      {task.is_active && <span style={{ color: '#4CAF50', marginLeft: '0.5rem' }}>●</span>}
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                      {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                      {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                      <span style={{ 
-                                        color: task.is_active ? '#4CAF50' : '#666',
-                                        fontWeight: task.is_active ? 'bold' : 'normal'
-                                      }}>
-                                        {task.is_active ? 'Active' : 'Inactive'}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
+                                {projectTasks.map(task => {
+                                  const taskSubtasks = subtasks[task.id] || [];
+                                  const isTaskExpanded = expandedTasks.has(task.id);
+                                  return (
+                                    <React.Fragment key={task.id}>
+                                      <tr>
+                                        <td style={{ padding: '0.5rem' }}>
+                                          {taskSubtasks.length > 0 && (
+                                            <button
+                                              onClick={() => toggleTaskExpansion(task.id)}
+                                              style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                padding: '0'
+                                              }}
+                                            >
+                                              {isTaskExpanded ? '▼' : '▶'}
+                                            </button>
+                                          )}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                          {task.name}
+                                          {task.is_active && <span style={{ color: '#4CAF50', marginLeft: '0.5rem' }}>●</span>}
+                                          {taskSubtasks.length > 0 && (
+                                            <span style={{ 
+                                              marginLeft: '0.5rem',
+                                              fontSize: '0.8rem',
+                                              color: '#667eea',
+                                              fontWeight: 'bold'
+                                            }}>
+                                              ({taskSubtasks.filter(s => s.is_completed).length}/{taskSubtasks.length} ✓)
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                          {task.allocated_time > 0 ? `${task.allocated_time} min` : '-'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                          <span style={{ 
+                                            color: task.is_active ? '#4CAF50' : '#666',
+                                            fontWeight: task.is_active ? 'bold' : 'normal'
+                                          }}>
+                                            {task.is_active ? 'Active' : 'Inactive'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                      
+                                      {/* Subtasks row */}
+                                      {isTaskExpanded && taskSubtasks.length > 0 && (
+                                        <tr>
+                                          <td colSpan="5" style={{ padding: '0 0.5rem 0.5rem 2rem', background: '#ffffff' }}>
+                                            <div style={{ fontSize: '0.85rem' }}>
+                                              <strong style={{ color: '#667eea' }}>📋 Subtasks:</strong>
+                                              <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.5rem' }}>
+                                                {taskSubtasks.map(subtask => (
+                                                  <li key={subtask.id} style={{
+                                                    textDecoration: subtask.is_completed ? 'line-through' : 'none',
+                                                    color: subtask.is_completed ? '#999' : '#333',
+                                                    marginBottom: '0.25rem'
+                                                  }}>
+                                                    {subtask.is_completed ? '☑' : '☐'} {subtask.name}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>

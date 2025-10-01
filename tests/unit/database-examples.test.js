@@ -13,6 +13,7 @@ const { expect } = require('chai');
 const mockDb = {
   projects: [],
   tasks: [],
+  subtasks: [],
   officePresence: [],
   nextId: 1,
   
@@ -42,11 +43,16 @@ const mockDb = {
   },
   
   addTask: function(task) {
+    // Validate that project_id is provided (mandatory as of v6)
+    if (!task.project_id) {
+      return Promise.reject(new Error('project_id is required for creating a task'));
+    }
+    
     const newTask = {
       id: this.nextId++,
       name: task.name,
       due_date: task.due_date || null,
-      project_id: task.project_id || null,
+      project_id: task.project_id,
       allocated_time: task.allocated_time || 0,
       is_active: false,
       created_at: new Date().toISOString(),
@@ -68,6 +74,46 @@ const mockDb = {
       result = result.slice(0, filters.limit);
     }
     return Promise.resolve(result);
+  },
+  
+  addSubTask: function(subTask) {
+    // Validate that parent_task_id is provided
+    if (!subTask.parent_task_id) {
+      return Promise.reject(new Error('parent_task_id is required for creating a subtask'));
+    }
+    
+    const newSubTask = {
+      id: this.nextId++,
+      name: subTask.name,
+      parent_task_id: subTask.parent_task_id,
+      is_completed: subTask.is_completed || false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    this.subtasks.push(newSubTask);
+    return Promise.resolve(newSubTask);
+  },
+  
+  getSubTasks: function(parentTaskId) {
+    return Promise.resolve(this.subtasks.filter(s => s.parent_task_id === parentTaskId));
+  },
+  
+  updateSubTask: function(subTask) {
+    const index = this.subtasks.findIndex(s => s.id === subTask.id);
+    if (index >= 0) {
+      this.subtasks[index] = { ...this.subtasks[index], ...subTask, updated_at: new Date().toISOString() };
+      return Promise.resolve(this.subtasks[index]);
+    }
+    return Promise.reject(new Error('Subtask not found'));
+  },
+  
+  deleteSubTask: function(id) {
+    const index = this.subtasks.findIndex(s => s.id === id);
+    if (index >= 0) {
+      this.subtasks.splice(index, 1);
+      return Promise.resolve({ deleted: true });
+    }
+    return Promise.resolve({ deleted: false });
   },
   
   addOfficePresence: function(presence) {
@@ -99,6 +145,7 @@ describe('Database Unit Test Examples (Documentation)', function() {
     // Reset mock data before each test
     mockDb.projects = [];
     mockDb.tasks = [];
+    mockDb.subtasks = [];
     mockDb.officePresence = [];
     mockDb.nextId = 1;
   });
@@ -191,21 +238,40 @@ describe('Database Unit Test Examples (Documentation)', function() {
     });
     
     it('should create a task with minimal required fields', async function() {
-      const taskData = { name: 'Simple task' };
+      const taskData = { 
+        name: 'Simple task',
+        project_id: testProject.id
+      };
       
       const result = await mockDb.addTask(taskData);
       
       expect(result.name).to.equal('Simple task');
       expect(result.due_date).to.be.null;
-      expect(result.project_id).to.be.null;
+      expect(result.project_id).to.equal(testProject.id);
       expect(result.allocated_time).to.equal(0);
       expect(result.is_active).to.be.false;
     });
     
+    it('should require project_id when creating a task', async function() {
+      const taskData = { name: 'Task without project' };
+      
+      try {
+        await mockDb.addTask(taskData);
+        expect.fail('Should have thrown an error');
+      } catch (err) {
+        expect(err.message).to.include('project_id is required');
+      }
+    });
+    
     it('should filter tasks by project', async function() {
+      const project2 = await mockDb.addProject({
+        name: 'Another Project',
+        description: 'Second test project'
+      });
+      
       await mockDb.addTask({ name: 'Task 1', project_id: testProject.id });
       await mockDb.addTask({ name: 'Task 2', project_id: testProject.id });
-      await mockDb.addTask({ name: 'Task 3' }); // No project
+      await mockDb.addTask({ name: 'Task 3', project_id: project2.id });
       
       const projectTasks = await mockDb.getTasks({ projectId: testProject.id });
       const allTasks = await mockDb.getTasks();
@@ -218,13 +284,123 @@ describe('Database Unit Test Examples (Documentation)', function() {
     });
     
     it('should limit number of returned tasks', async function() {
-      await mockDb.addTask({ name: 'Task 1' });
-      await mockDb.addTask({ name: 'Task 2' });
-      await mockDb.addTask({ name: 'Task 3' });
+      await mockDb.addTask({ name: 'Task 1', project_id: testProject.id });
+      await mockDb.addTask({ name: 'Task 2', project_id: testProject.id });
+      await mockDb.addTask({ name: 'Task 3', project_id: testProject.id });
       
       const limitedTasks = await mockDb.getTasks({ limit: 2 });
       
       expect(limitedTasks).to.have.length(2);
+    });
+  });
+  
+  describe('Subtask CRUD Operations', function() {
+    let testProject;
+    let testTask;
+    
+    beforeEach(async function() {
+      testProject = await mockDb.addProject({
+        name: 'Test Project for Subtasks',
+        description: 'Project for subtask testing'
+      });
+      
+      testTask = await mockDb.addTask({
+        name: 'Parent Task',
+        project_id: testProject.id,
+        due_date: '2024-12-31',
+        allocated_time: 240
+      });
+    });
+    
+    it('should create a subtask with all fields', async function() {
+      const subtaskData = {
+        name: 'Complete first step',
+        parent_task_id: testTask.id,
+        is_completed: false
+      };
+      
+      const result = await mockDb.addSubTask(subtaskData);
+      
+      expect(result).to.have.property('id');
+      expect(result.name).to.equal('Complete first step');
+      expect(result.parent_task_id).to.equal(testTask.id);
+      expect(result.is_completed).to.be.false;
+      expect(result).to.have.property('created_at');
+      expect(result).to.have.property('updated_at');
+    });
+    
+    it('should require parent_task_id when creating a subtask', async function() {
+      const subtaskData = { name: 'Orphaned subtask' };
+      
+      try {
+        await mockDb.addSubTask(subtaskData);
+        expect.fail('Should have thrown an error');
+      } catch (err) {
+        expect(err.message).to.include('parent_task_id is required');
+      }
+    });
+    
+    it('should retrieve subtasks for a task', async function() {
+      await mockDb.addSubTask({ name: 'Subtask 1', parent_task_id: testTask.id });
+      await mockDb.addSubTask({ name: 'Subtask 2', parent_task_id: testTask.id });
+      await mockDb.addSubTask({ name: 'Subtask 3', parent_task_id: testTask.id });
+      
+      const subtasks = await mockDb.getSubTasks(testTask.id);
+      
+      expect(subtasks).to.have.length(3);
+      subtasks.forEach(subtask => {
+        expect(subtask.parent_task_id).to.equal(testTask.id);
+      });
+    });
+    
+    it('should update a subtask', async function() {
+      const subtask = await mockDb.addSubTask({
+        name: 'Initial name',
+        parent_task_id: testTask.id,
+        is_completed: false
+      });
+      
+      const updated = await mockDb.updateSubTask({
+        id: subtask.id,
+        name: 'Updated name',
+        is_completed: true
+      });
+      
+      expect(updated.name).to.equal('Updated name');
+      expect(updated.is_completed).to.be.true;
+    });
+    
+    it('should delete a subtask', async function() {
+      const subtask = await mockDb.addSubTask({
+        name: 'To be deleted',
+        parent_task_id: testTask.id
+      });
+      
+      const result = await mockDb.deleteSubTask(subtask.id);
+      expect(result.deleted).to.be.true;
+      
+      const remaining = await mockDb.getSubTasks(testTask.id);
+      expect(remaining).to.have.length(0);
+    });
+    
+    it('should track completion status of subtasks', async function() {
+      await mockDb.addSubTask({ 
+        name: 'Completed subtask', 
+        parent_task_id: testTask.id, 
+        is_completed: true 
+      });
+      await mockDb.addSubTask({ 
+        name: 'Incomplete subtask', 
+        parent_task_id: testTask.id, 
+        is_completed: false 
+      });
+      
+      const subtasks = await mockDb.getSubTasks(testTask.id);
+      const completed = subtasks.filter(s => s.is_completed);
+      const incomplete = subtasks.filter(s => !s.is_completed);
+      
+      expect(completed).to.have.length(1);
+      expect(incomplete).to.have.length(1);
     });
   });
   
@@ -302,15 +478,29 @@ describe('Database Unit Test Examples (Documentation)', function() {
     
     it('should handle very long names', async function() {
       const longName = 'A'.repeat(255);
-      const task = await mockDb.addTask({ name: longName });
+      const project = await mockDb.addProject({ 
+        name: 'Test Project',
+        description: 'For testing long task names'
+      });
+      
+      const task = await mockDb.addTask({ 
+        name: longName,
+        project_id: project.id
+      });
       
       expect(task.name).to.equal(longName);
       expect(task.name).to.have.length(255);
     });
     
     it('should handle zero and edge values', async function() {
+      const project = await mockDb.addProject({ 
+        name: 'Test Project',
+        description: 'For testing edge values'
+      });
+      
       const edgeTask = await mockDb.addTask({
         name: 'Edge Case Task',
+        project_id: project.id,
         allocated_time: 0,
         due_date: '1900-01-01'
       });
@@ -322,11 +512,17 @@ describe('Database Unit Test Examples (Documentation)', function() {
   
   describe('Database Integrity', function() {
     it('should maintain data consistency with concurrent operations', async function() {
+      const project = await mockDb.addProject({ 
+        name: 'Test Project',
+        description: 'For testing concurrent operations'
+      });
+      
       // Simulate concurrent task creation
       const taskPromises = [];
       for (let i = 1; i <= 10; i++) {
         taskPromises.push(mockDb.addTask({
           name: `Concurrent Task ${i}`,
+          project_id: project.id,
           allocated_time: i * 15
         }));
       }
