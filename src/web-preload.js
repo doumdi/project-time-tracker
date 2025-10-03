@@ -13,7 +13,7 @@ async function initDatabase() {
   
   console.log('[WEB MODE] Initializing in-memory database with sql.js');
   SQL = await initSqlJs({
-    locateFile: file => `https://sql.js.org/dist/${file}`
+    locateFile: file => `./${file}`
   });
   
   db = new SQL.Database();
@@ -166,7 +166,7 @@ window.electronAPI = {
     await initDatabase();
     runSQL(
       'INSERT INTO projects (name, description, color, budget, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)',
-      [project.name, project.description, project.color || '#4CAF50', project.budget || 0, project.start_date, project.end_date]
+      [project.name, project.description || '', project.color || '#4CAF50', project.budget || 0, project.start_date || null, project.end_date || null]
     );
     const result = execSQL('SELECT * FROM projects WHERE id = last_insert_rowid()');
     return result[0];
@@ -176,7 +176,7 @@ window.electronAPI = {
     await initDatabase();
     runSQL(
       'UPDATE projects SET name = ?, description = ?, color = ?, budget = ?, start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [project.name, project.description, project.color, project.budget, project.start_date, project.end_date, project.id]
+      [project.name, project.description || '', project.color || '#4CAF50', project.budget || 0, project.start_date || null, project.end_date || null, project.id]
     );
     const result = execSQL('SELECT * FROM projects WHERE id = ?', [project.id]);
     return result[0];
@@ -221,7 +221,7 @@ window.electronAPI = {
     await initDatabase();
     runSQL(
       'INSERT INTO time_entries (project_id, task_id, description, start_time, end_time, duration) VALUES (?, ?, ?, ?, ?, ?)',
-      [entry.project_id, entry.task_id, entry.description, entry.start_time, entry.end_time, entry.duration]
+      [entry.project_id, entry.task_id || null, entry.description || '', entry.start_time, entry.end_time, entry.duration]
     );
     const result = execSQL('SELECT * FROM time_entries WHERE id = last_insert_rowid()');
     return result[0];
@@ -231,7 +231,7 @@ window.electronAPI = {
     await initDatabase();
     runSQL(
       'UPDATE time_entries SET project_id = ?, task_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [entry.project_id, entry.task_id, entry.description, entry.start_time, entry.end_time, entry.duration, entry.id]
+      [entry.project_id, entry.task_id || null, entry.description || '', entry.start_time, entry.end_time, entry.duration, entry.id]
     );
     const result = execSQL('SELECT * FROM time_entries WHERE id = ?', [entry.id]);
     return result[0];
