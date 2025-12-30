@@ -4,7 +4,7 @@ This guide explains how to build and test the Qt/C++/QML implementation of Proje
 
 ## Prerequisites
 
-- Qt 6.10.1 or later
+- Qt 6.2 or later (Qt 6.5+ recommended)
 - CMake 3.16 or later
 - C++17 compatible compiler
 - Node.js and npm (for creating test database)
@@ -26,8 +26,8 @@ export CMAKE_PREFIX_PATH="/opt/homebrew/opt/qt@6"
 ```
 
 **Windows:**
-- Download Qt 6.10.1 from https://www.qt.io/download
-- Install Qt Creator and Qt 6.10.1 with required modules (Charts, Bluetooth)
+- Download Qt 6.5+ from https://www.qt.io/download
+- Install Qt Creator and Qt with required modules (Charts, Bluetooth)
 - Add Qt bin directory to PATH
 
 ## Building the Application
@@ -61,7 +61,7 @@ cmake ..
 If Qt is not found automatically, specify the Qt installation path:
 
 ```bash
-cmake -DCMAKE_PREFIX_PATH=/path/to/Qt/6.10.1/gcc_64 ..
+cmake -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.x/gcc_64 ..
 ```
 
 ### Step 3: Build
@@ -157,7 +157,7 @@ mkdir build-wasm
 cd build-wasm
 
 # Configure with Qt for WebAssembly
-/path/to/Qt/6.10.1/wasm_singlethread/bin/qt-cmake ..
+/path/to/Qt/6.x.x/wasm_singlethread/bin/qt-cmake ..
 
 # Build
 cmake --build .
@@ -321,7 +321,7 @@ To migrate from Electron to Qt:
 
 Using Qt Creator:
 1. Open `qt_app/CMakeLists.txt` in Qt Creator
-2. Configure project with Qt 6.10.1
+2. Configure project with Qt 6.2+
 3. Set breakpoints in C++ code
 4. Run with debugger (F5)
 

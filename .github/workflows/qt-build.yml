@@ -22,7 +22,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.10.1'
+          version: '6.5.3'
           modules: 'qtcharts qtbluetooth'
           cache: true
       
@@ -66,7 +66,7 @@ jobs:
       - name: Install Qt for WebAssembly
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.10.1'
+          version: '6.5.3'
           arch: 'wasm_singlethread'
           modules: 'qtcharts'
           cache: true
@@ -74,7 +74,7 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
         with:
-          version: '3.1.50'
+          version: '3.1.25'
       
       - name: Configure CMake for WebAssembly
         working-directory: qt_app

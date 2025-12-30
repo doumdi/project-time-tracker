@@ -43,16 +43,22 @@ else
 fi
 
 # Check Qt
+echo ""
 echo "🎨 Checking Qt..."
 if command -v qmake6 &> /dev/null; then
     QMAKE_VERSION=$(qmake6 --version | grep "Using Qt version")
     echo "✅ Qt6 found: $QMAKE_VERSION"
+    # Check if it's at least Qt 6.2
+    QT_VER=$(qmake6 --version | grep -oP "(?<=Using Qt version )\d+\.\d+" | head -1)
+    if [[ ! -z "$QT_VER" ]]; then
+        echo "   Qt version: $QT_VER (requires 6.2+)"
+    fi
 elif command -v qmake &> /dev/null; then
     QMAKE_VERSION=$(qmake --version | grep "Using Qt version")
     echo "⚠️  Qt found but may not be Qt6: $QMAKE_VERSION"
 else
     echo "⚠️  Qt not found - required for building Qt app"
-    echo "   Install Qt 6.10.1 from https://www.qt.io/download"
+    echo "   Install Qt 6.2+ from https://www.qt.io/download"
 fi
 
 # Check C++ compiler

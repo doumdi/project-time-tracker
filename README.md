@@ -105,7 +105,7 @@ Author(s) :
 
 ### Qt Version (New)
 
-- **Qt 6** - Cross-platform application framework (6.10.1+)
+- **Qt 6** - Cross-platform application framework (6.2+, 6.5+ recommended)
 - **C++17** - High-performance backend
 - **QML** - Declarative UI language
 - **Qt SQL** - Database module with SQLite support

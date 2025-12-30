@@ -8,8 +8,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Qt6 packages - requires Qt 6.10.1 or later
-find_package(Qt6 6.10.1 REQUIRED COMPONENTS
+# Qt6 packages - requires Qt 6.2 or later (6.10.1+ recommended)
+find_package(Qt6 6.2 REQUIRED COMPONENTS
     Core
     Gui
     Qml
@@ -22,6 +22,15 @@ find_package(Qt6 6.10.1 REQUIRED COMPONENTS
 )
 
 # Platform-specific settings
+if(WIN32)
+    # Windows-specific settings
+    set(CMAKE_WIN32_EXECUTABLE ON)
+    # Enable console for debugging on Windows
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_WIN32_EXECUTABLE OFF)
+    endif()
+endif()
+
 if(EMSCRIPTEN)
     message(STATUS "Building for WebAssembly")
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
@@ -80,11 +89,16 @@ set(TS_FILES
     translations/app_fr.ts
 )
 
-# Create translation targets
-qt6_add_translations(${PROJECT_NAME}
-    TS_FILES ${TS_FILES}
-    RESOURCE_PREFIX "/translations"
-)
+# Create translation targets (Qt 6.2+)
+if(COMMAND qt6_add_translations)
+    qt6_add_translations(${PROJECT_NAME}
+        TS_FILES ${TS_FILES}
+        RESOURCE_PREFIX "/translations"
+    )
+else()
+    # Fallback for older Qt versions
+    qt_add_translation(QM_FILES ${TS_FILES})
+endif()
 
 # Add executable
 if(EMSCRIPTEN)
@@ -94,6 +108,14 @@ if(EMSCRIPTEN)
         -sALLOW_MEMORY_GROWTH=1
         -sEXIT_RUNTIME=0
         -sFORCE_FILESYSTEM=1
+    )
+elseif(APPLE)
+    # macOS app bundle
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${QML_RESOURCES})
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.doumdi.projecttimetracker"
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
 else()
     add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES})

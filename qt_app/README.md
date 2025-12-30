@@ -14,7 +14,7 @@ This is a Qt-based reimplementation of the Project Time Tracker application usin
 
 ## Requirements
 
-- Qt 6.10.1 or later
+- Qt 6.2 or later (Qt 6.5+ recommended)
 - CMake 3.16 or later
 - C++17 compatible compiler
 - Qt modules: Core, Gui, Qml, Quick, Sql, Bluetooth, Charts, Concurrent
@@ -58,7 +58,7 @@ Then build:
 cd qt_app
 mkdir build-wasm
 cd build-wasm
-/path/to/Qt/6.10.1/wasm_singlethread/bin/qt-cmake ..
+/path/to/Qt/6.x.x/wasm_singlethread/bin/qt-cmake ..
 cmake --build .
 ```
 
