@@ -18,8 +18,21 @@ This is a Qt-based reimplementation of the Project Time Tracker application usin
 - CMake 3.16 or later
 - C++17 compatible compiler
 - Qt modules: Core, Gui, Qml, Quick, Sql, Bluetooth, Charts, Concurrent
+- Node.js and npm (for creating test database from Electron app)
+
+**Quick validation:** Run `./qt_app/scripts/validate-build-requirements.sh` to check all requirements.
 
 ## Building
+
+### Validate Requirements
+
+First, check if you have all the required tools:
+
+```bash
+./qt_app/scripts/validate-build-requirements.sh
+```
+
+This will check for Qt, CMake, C++ compiler, and other dependencies.
 
 ### Desktop (Windows/Mac/Linux)
 
