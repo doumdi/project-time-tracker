@@ -1,0 +1,129 @@
+name: Qt Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-desktop:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        qt_version: ['6.5.3']
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ matrix.qt_version }}
+          modules: 'qtcharts qtbluetooth'
+          cache: true
+      
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libbluetooth-dev
+      
+      - name: Configure CMake
+        working-directory: qt_app
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+      
+      - name: Build
+        working-directory: qt_app/build
+        run: cmake --build . --config Release
+      
+      - name: Test
+        working-directory: qt_app/build
+        run: ctest -C Release --output-on-failure
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ProjectTimeTracker-${{ matrix.os }}
+          path: |
+            qt_app/build/ProjectTimeTracker*
+            !qt_app/build/**/*.o
+            !qt_app/build/**/*.obj
+
+  build-wasm:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Qt for WebAssembly
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.3'
+          arch: 'wasm_singlethread'
+          modules: 'qtcharts'
+          cache: true
+      
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v13
+        with:
+          version: '3.1.25'
+      
+      - name: Configure CMake for WebAssembly
+        working-directory: qt_app
+        run: |
+          mkdir build-wasm
+          cd build-wasm
+          emcmake cmake ..
+      
+      - name: Build WebAssembly
+        working-directory: qt_app/build-wasm
+        run: cmake --build .
+      
+      - name: Upload WebAssembly artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ProjectTimeTracker-wasm
+          path: |
+            qt_app/build-wasm/*.html
+            qt_app/build-wasm/*.js
+            qt_app/build-wasm/*.wasm
+
+  deploy-wasm:
+    needs: build-wasm
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download WebAssembly artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ProjectTimeTracker-wasm
+          path: wasm-dist
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: wasm-dist
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

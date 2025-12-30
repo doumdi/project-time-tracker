@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/views/TimeTrackerView.qml</file>
+        <file>qml/views/ProjectManagerView.qml</file>
+        <file>qml/views/TasksView.qml</file>
+        <file>qml/views/TimeEntryListView.qml</file>
+        <file>qml/views/CalendarView.qml</file>
+        <file>qml/views/ChartsView.qml</file>
+        <file>qml/views/ReportsView.qml</file>
+        <file>qml/views/OfficePresenceView.qml</file>
+        <file>qml/views/SettingsView.qml</file>
+    </qresource>
+</RCC>
