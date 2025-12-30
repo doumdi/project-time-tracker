@@ -14,7 +14,7 @@ This is a Qt-based reimplementation of the Project Time Tracker application usin
 
 ## Requirements
 
-- Qt 6.2 or later
+- Qt 6.10.1 or later
 - CMake 3.16 or later
 - C++17 compatible compiler
 - Qt modules: Core, Gui, Qml, Quick, Sql, Bluetooth, Charts, Concurrent
@@ -33,7 +33,7 @@ cmake --build .
 
 ### WebAssembly
 
-First, set up Qt for WebAssembly and activate the Emscripten environment:
+First, set up Qt for WebAssembly (6.10.1+) and activate the Emscripten environment (3.1.50+):
 
 ```bash
 source /path/to/emsdk/emsdk_env.sh
@@ -45,7 +45,7 @@ Then build:
 cd qt_app
 mkdir build-wasm
 cd build-wasm
-/path/to/Qt/6.x.x/wasm_singlethread/bin/qt-cmake ..
+/path/to/Qt/6.10.1/wasm_singlethread/bin/qt-cmake ..
 cmake --build .
 ```
 

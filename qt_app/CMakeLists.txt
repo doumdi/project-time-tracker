@@ -8,8 +8,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Qt6 packages
-find_package(Qt6 REQUIRED COMPONENTS
+# Qt6 packages - requires Qt 6.10.1 or later
+find_package(Qt6 6.10.1 REQUIRED COMPONENTS
     Core
     Gui
     Qml

@@ -226,7 +226,7 @@ Integration tests verify:
 ### Desktop Build
 
 **Requirements**
-- Qt 6.2+ (with Charts, Bluetooth modules)
+- Qt 6.10.1+ (with Charts, Bluetooth modules)
 - CMake 3.16+
 - C++17 compiler
 
@@ -240,8 +240,8 @@ cmake --build . --config Release
 ### WebAssembly Build
 
 **Requirements**
-- Qt for WebAssembly
-- Emscripten 3.1.25+
+- Qt for WebAssembly (6.10.1+)
+- Emscripten 3.1.50+
 
 **Build Steps**
 ```bash
