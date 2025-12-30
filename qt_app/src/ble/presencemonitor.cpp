@@ -1,5 +1,8 @@
 #include "ble/presencemonitor.h"
 #include "ble/blemanager.h"
+#include "database/database.h"
+#include <QSqlQuery>
+#include <QSqlError>
 #include <QDebug>
 
 const int PresenceMonitor::SCAN_INTERVAL_MS = 60000;  // 60 seconds
@@ -146,26 +149,89 @@ void PresenceMonitor::saveCurrentSession()
         return;
     }
     
-    // TODO: Save session to database
-    qInfo() << "[PRESENCE MONITOR] Saving session, duration:" << duration << "minutes";
+    // Save session to database
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("INSERT INTO office_presence (date, start_time, end_time, duration) VALUES (:date, :start, :end, :duration)");
+    query.bindValue(":date", m_sessionStartTime.date().toString(Qt::ISODate));
+    query.bindValue(":start", m_sessionStartTime.toString(Qt::ISODate));
+    query.bindValue(":end", QDateTime::currentDateTime().toString(Qt::ISODate));
+    query.bindValue(":duration", duration);
+    
+    if (!query.exec()) {
+        qWarning() << "[PRESENCE MONITOR] Failed to save session:" << query.lastError().text();
+        return;
+    }
+    
+    qInfo() << "[PRESENCE MONITOR] Saved session, duration:" << duration << "minutes";
 }
 
 QVariantList PresenceMonitor::getTodayPresence()
 {
+    QDate today = QDate::currentDate();
     QVariantList result;
-    // TODO: Load from database
+    
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("SELECT id, start_time, end_time, duration FROM office_presence WHERE date = :date ORDER BY start_time");
+    query.bindValue(":date", today.toString(Qt::ISODate));
+    
+    if (!query.exec()) {
+        qWarning() << "[PRESENCE MONITOR] Failed to query today's presence:" << query.lastError().text();
+        return result;
+    }
+    
+    while (query.next()) {
+        QVariantMap session;
+        session["id"] = query.value(0).toInt();
+        session["startTime"] = query.value(1).toString();
+        session["endTime"] = query.value(2).toString();
+        session["duration"] = query.value(3).toInt();
+        result.append(session);
+    }
+    
     return result;
 }
 
 QVariantList PresenceMonitor::getPresenceByDate(const QDateTime &date)
 {
     QVariantList result;
-    // TODO: Load from database
+    
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("SELECT id, start_time, end_time, duration FROM office_presence WHERE date = :date ORDER BY start_time");
+    query.bindValue(":date", date.date().toString(Qt::ISODate));
+    
+    if (!query.exec()) {
+        qWarning() << "[PRESENCE MONITOR] Failed to query presence:" << query.lastError().text();
+        return result;
+    }
+    
+    while (query.next()) {
+        QVariantMap session;
+        session["id"] = query.value(0).toInt();
+        session["startTime"] = query.value(1).toString();
+        session["endTime"] = query.value(2).toString();
+        session["duration"] = query.value(3).toInt();
+        result.append(session);
+    }
+    
     return result;
 }
 
 int PresenceMonitor::getTotalMinutesToday()
 {
-    // TODO: Calculate from database
+    QDate today = QDate::currentDate();
+    
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("SELECT SUM(duration) FROM office_presence WHERE date = :date");
+    query.bindValue(":date", today.toString(Qt::ISODate));
+    
+    if (!query.exec()) {
+        qWarning() << "[PRESENCE MONITOR] Failed to calculate total minutes:" << query.lastError().text();
+        return 0;
+    }
+    
+    if (query.next()) {
+        return query.value(0).toInt();
+    }
+    
     return 0;
 }
