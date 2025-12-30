@@ -1,5 +1,5 @@
-#ifndef OFFICEPRESENDEMODEL_H
-#define OFFICEPRESENDEMODEL_H
+#ifndef OFFICEPRESENCEMODEL_H
+#define OFFICEPRESENCEMODEL_H
 
 #include <QObject>
 #include <QDateTime>
@@ -48,4 +48,4 @@ private:
     int m_deviceId;
 };
 
-#endif // OFFICEPRESENDEMODEL_H
+#endif // OFFICEPRESENCEMODEL_H

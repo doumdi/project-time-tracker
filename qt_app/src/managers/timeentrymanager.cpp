@@ -64,14 +64,53 @@ QVariantList TimeEntryManager::getTimeEntriesByProject(int projectId)
 QVariantList TimeEntryManager::getTimeEntriesByDateRange(const QDateTime &start, const QDateTime &end)
 {
     QVariantList result;
-    // TODO: Implement date range filtering
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("SELECT id, project_id, task_id, description, start_time, end_time, duration FROM time_entries WHERE start_time >= :start AND end_time <= :end ORDER BY start_time DESC");
+    query.bindValue(":start", start.toString(Qt::ISODate));
+    query.bindValue(":end", end.toString(Qt::ISODate));
+    
+    if (!query.exec()) {
+        emit error(query.lastError().text());
+        return result;
+    }
+    
+    while (query.next()) {
+        QVariantMap entry;
+        entry["id"] = query.value(0).toInt();
+        entry["projectId"] = query.value(1).toInt();
+        entry["taskId"] = query.value(2).toInt();
+        entry["description"] = query.value(3).toString();
+        entry["startTime"] = query.value(4).toString();
+        entry["endTime"] = query.value(5).toString();
+        entry["duration"] = query.value(6).toInt();
+        result.append(entry);
+    }
+    
     return result;
 }
 
 QVariantMap TimeEntryManager::getTimeEntry(int id)
 {
     QVariantMap result;
-    // TODO: Implement
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("SELECT id, project_id, task_id, description, start_time, end_time, duration FROM time_entries WHERE id = :id");
+    query.bindValue(":id", id);
+    
+    if (!query.exec()) {
+        emit error(query.lastError().text());
+        return result;
+    }
+    
+    if (query.next()) {
+        result["id"] = query.value(0).toInt();
+        result["projectId"] = query.value(1).toInt();
+        result["taskId"] = query.value(2).toInt();
+        result["description"] = query.value(3).toString();
+        result["startTime"] = query.value(4).toString();
+        result["endTime"] = query.value(5).toString();
+        result["duration"] = query.value(6).toInt();
+    }
+    
     return result;
 }
 
@@ -98,14 +137,40 @@ bool TimeEntryManager::createTimeEntry(const QVariantMap &entryData)
 
 bool TimeEntryManager::updateTimeEntry(int id, const QVariantMap &entryData)
 {
-    // TODO: Implement
-    return false;
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("UPDATE time_entries SET project_id=:projectId, task_id=:taskId, description=:desc, start_time=:start, end_time=:end, duration=:duration WHERE id=:id");
+    query.bindValue(":id", id);
+    query.bindValue(":projectId", entryData.value("projectId"));
+    query.bindValue(":taskId", entryData.value("taskId"));
+    query.bindValue(":desc", entryData.value("description"));
+    query.bindValue(":start", entryData.value("startTime"));
+    query.bindValue(":end", entryData.value("endTime"));
+    query.bindValue(":duration", entryData.value("duration"));
+    
+    if (!query.exec()) {
+        emit error(query.lastError().text());
+        return false;
+    }
+    
+    emit timeEntryUpdated(id);
+    emit timeEntriesChanged();
+    return true;
 }
 
 bool TimeEntryManager::deleteTimeEntry(int id)
 {
-    // TODO: Implement
-    return false;
+    QSqlQuery query(Database::instance()->database());
+    query.prepare("DELETE FROM time_entries WHERE id = :id");
+    query.bindValue(":id", id);
+    
+    if (!query.exec()) {
+        emit error(query.lastError().text());
+        return false;
+    }
+    
+    emit timeEntryDeleted(id);
+    emit timeEntriesChanged();
+    return true;
 }
 
 bool TimeEntryManager::startTimer(int projectId, int taskId, const QString &description)
