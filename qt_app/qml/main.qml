@@ -14,7 +14,7 @@ ApplicationWindow {
 
     header: ToolBar {
         RowLayout {
-            anchoring.fill: parent
+            anchors.fill: parent
             anchors.margins: 5
 
             Label {
