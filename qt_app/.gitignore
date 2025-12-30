@@ -44,6 +44,9 @@ Makefile
 # Test results
 Testing/
 
+# Test databases (generated from Electron app)
+tests/test_database.db
+
 # WebAssembly
 *.wasm
 *.js.mem

@@ -48,7 +48,7 @@ jobs:
         run: ctest -C Release --output-on-failure
       
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ProjectTimeTracker-${{ matrix.os }}
           path: |
@@ -88,7 +88,7 @@ jobs:
         run: cmake --build .
       
       - name: Upload WebAssembly artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ProjectTimeTracker-wasm
           path: |
@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Download WebAssembly artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ProjectTimeTracker-wasm
           path: wasm-dist
