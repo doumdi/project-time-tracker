@@ -20,24 +20,39 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
           modules: 'qtcharts qtbluetooth'
           cache: true
+          setup-python: true
+          aqtversion: '==3.1.*'
+      
+      - name: Debug Qt Installation
+        run: |
+          echo "Checking Qt installation..."
+          find $Qt6_DIR -name "Qt6Charts*" 2>/dev/null || echo "Qt6Charts not found"
+          find $Qt6_DIR -name "Qt6Bluetooth*" 2>/dev/null || echo "Qt6Bluetooth not found"
+        shell: bash
       
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libbluetooth-dev
+          sudo apt-get install -y libbluetooth-dev libgl1-mesa-dev
+      
+      - name: Verify Qt Installation
+        run: |
+          echo "Qt Directory: ${{ env.Qt6_DIR }}"
+          echo "CMAKE_PREFIX_PATH: $CMAKE_PREFIX_PATH"
+          qmake --version || echo "qmake not found"
       
       - name: Configure CMake
         working-directory: qt_app
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake .. -DCMAKE_BUILD_TYPE=Release
       
       - name: Build
         working-directory: qt_app/build
@@ -64,24 +79,32 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Install Qt for WebAssembly
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
           arch: 'wasm_singlethread'
           modules: 'qtcharts'
           cache: true
+          setup-python: true
+          aqtversion: '==3.1.*'
       
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v13
+        uses: mymindstorm/setup-emsdk@v14
         with:
           version: '3.1.25'
+          actions-cache-folder: 'emsdk-cache'
+      
+      - name: Verify Emscripten Installation
+        run: |
+          emcc --version
+          echo "EMSDK: $EMSDK"
       
       - name: Configure CMake for WebAssembly
         working-directory: qt_app
         run: |
           mkdir build-wasm
           cd build-wasm
-          emcmake cmake ..
+          emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
       
       - name: Build WebAssembly
         working-directory: qt_app/build-wasm
