@@ -133,65 +133,31 @@ bool Database::createTables()
         CREATE TABLE IF NOT EXISTS time_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER NOT NULL,
-            task_id INTEGER,
             description TEXT,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             duration INTEGER NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
-        )
-    )";
-    
-    // Create tasks table
-    createStatements << R"(
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER,
-            name TEXT NOT NULL,
-            description TEXT,
-            allocated_minutes INTEGER DEFAULT 0,
-            due_date TEXT,
-            status TEXT DEFAULT 'pending',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
         )
     )";
     
-    // Create BLE devices table
-    createStatements << R"(
-        CREATE TABLE IF NOT EXISTS ble_devices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            address TEXT NOT NULL UNIQUE,
-            device_type TEXT DEFAULT 'other',
-            is_active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
-    
-    // Create office presence table
-    createStatements << R"(
-        CREATE TABLE IF NOT EXISTS office_presence (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            start_time TEXT NOT NULL,
-            end_time TEXT NOT NULL,
-            duration INTEGER NOT NULL,
-            device_id INTEGER,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (device_id) REFERENCES ble_devices(id) ON DELETE SET NULL
-        )
-    )";
+    // BLE devices and tasks tables will be created by migrations (v4, v5, v6, v7)
     
     // Execute all create statements
     for (const QString &sql : createStatements) {
         if (!executeSql(sql)) {
+            return false;
+        }
+    }
+    
+    // Set initial version to 1 if this is a new database
+    int currentVersion = DatabaseMigration::getCurrentVersion(m_db);
+    if (currentVersion == 0) {
+        qInfo() << "New database detected, setting initial version to 1";
+        if (!DatabaseMigration::setVersion(m_db, 1)) {
+            qCritical() << "Failed to set initial database version";
             return false;
         }
     }

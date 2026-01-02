@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt6 REQUIRED COMPONENTS Test Core Sql)
+find_package(Qt6 REQUIRED COMPONENTS Test Core Sql Gui)
 
 enable_testing()
 
@@ -24,6 +24,7 @@ target_link_libraries(test_database PRIVATE
     Qt6::Test
     Qt6::Core
     Qt6::Sql
+    Qt6::Gui
 )
 add_test(NAME test_database COMMAND test_database)
 
@@ -39,6 +40,7 @@ target_link_libraries(test_projectmanager PRIVATE
     Qt6::Test
     Qt6::Core
     Qt6::Sql
+    Qt6::Gui
 )
 add_test(NAME test_projectmanager COMMAND test_projectmanager)
 
@@ -54,5 +56,6 @@ target_link_libraries(test_timeentrymanager PRIVATE
     Qt6::Test
     Qt6::Core
     Qt6::Sql
+    Qt6::Gui
 )
 add_test(NAME test_timeentrymanager COMMAND test_timeentrymanager)

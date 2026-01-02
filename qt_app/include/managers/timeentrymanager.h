@@ -50,7 +50,7 @@ private:
     
     int roundToFiveMinutes(int minutes);
     QVariantMap timeEntryToVariantMap(const TimeEntryModel &entry);
-    TimeEntryModel variantMapToTimeEntry(const QVariantMap &data);
+
 };
 
 #endif // TIMEENTRYMANAGER_H

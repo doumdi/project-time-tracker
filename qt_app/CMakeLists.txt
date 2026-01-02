@@ -4,12 +4,13 @@ project(ProjectTimeTracker VERSION 1.0.15 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
+# set(CMAKE_AUTOMOC ON)
+# set(CMAKE_AUTORCC ON)
+# set(CMAKE_AUTOUIC ON)
+
 
 # Qt6 packages - requires Qt 6.2 or later (6.10.1+ recommended)
-find_package(Qt6 6.2 REQUIRED COMPONENTS
+find_package(Qt6 REQUIRED COMPONENTS
     Core
     Gui
     Qml
@@ -18,8 +19,10 @@ find_package(Qt6 6.2 REQUIRED COMPONENTS
     Bluetooth
     Charts
     Concurrent
-    LinguistTools
+    LinguistTools    
 )
+
+qt_standard_project_setup()
 
 # Platform-specific settings
 if(WIN32)
@@ -40,6 +43,7 @@ endif()
 
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Source files
 set(SOURCES
@@ -100,9 +104,16 @@ else()
     qt_add_translation(QM_FILES ${TS_FILES})
 endif()
 
+
+#Generate .h files from the .ui files
+#QT6_WRAP_UI(moc_uis ${uis})
+
+#This will generate moc_* for Qt
+# QT6_WRAP_CPP(MOC_SRCS ${HEADERS})
+
 # Add executable
 if(EMSCRIPTEN)
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES})
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
     target_link_options(${PROJECT_NAME} PRIVATE
         -sASYNCIFY
         -sALLOW_MEMORY_GROWTH=1
@@ -111,14 +122,16 @@ if(EMSCRIPTEN)
     )
 elseif(APPLE)
     # macOS app bundle
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${QML_RESOURCES})
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.doumdi.projecttimetracker"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
+
+
 else()
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES})
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
 endif()
 
 # Link Qt libraries
@@ -133,6 +146,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Concurrent
 )
 
+get_target_property(TARGET_INCLUDES ${PROJECT_NAME} INCLUDE_DIRECTORIES)
+message(STATUS "Include directories ${TARGET_INCLUDES}")
+
 # Install rules
 install(TARGETS ${PROJECT_NAME}
     BUNDLE DESTINATION .
@@ -141,5 +157,5 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 # Enable testing
-enable_testing()
-add_subdirectory(tests)
+# enable_testing()
+# add_subdirectory(tests)

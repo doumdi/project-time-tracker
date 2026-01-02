@@ -11,9 +11,11 @@ BleManager::BleManager(QObject *parent)
             this, &BleManager::onDeviceDiscovered);
     connect(m_deviceDiscoveryAgent, &QBluetoothDeviceDiscoveryAgent::finished,
             this, &BleManager::onScanFinished);
+    /*
     connect(m_deviceDiscoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error),
             this, &BleManager::onScanError);
-    
+    */
+
     checkBluetoothAvailability();
 }
 

@@ -18,6 +18,7 @@ class TimeEntryModel : public QObject
 
 public:
     explicit TimeEntryModel(QObject *parent = nullptr);
+
     
     int id() const { return m_id; }
     int projectId() const { return m_projectId; }

@@ -29,7 +29,7 @@ signals:
 
 private:
     QVariantMap taskToVariantMap(const TaskModel &task);
-    TaskModel variantMapToTask(const QVariantMap &data);
+
 };
 
 #endif // TASKMANAGER_H

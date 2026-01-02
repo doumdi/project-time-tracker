@@ -38,10 +38,12 @@ int main(int argc, char *argv[])
         database->setDemoMode(true);
     }
     
+
     if (!database->initialize()) {
         qCritical() << "Failed to initialize database";
         return -1;
     }
+
     
     // Create managers
     ProjectManager projectManager;

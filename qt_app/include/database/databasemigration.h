@@ -16,6 +16,7 @@ public:
     static bool setVersion(QSqlDatabase &db, int version);
 
 private:
+    static bool migrateToV1(QSqlDatabase &db);
     static bool migrateToV2(QSqlDatabase &db);
     static bool migrateToV3(QSqlDatabase &db);
     static bool migrateToV4(QSqlDatabase &db);

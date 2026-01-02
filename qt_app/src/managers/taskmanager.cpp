@@ -155,9 +155,3 @@ QVariantMap TaskManager::taskToVariantMap(const TaskModel &task)
     return map;
 }
 
-TaskModel TaskManager::variantMapToTask(const QVariantMap &data)
-{
-    TaskModel task;
-    // TODO: Implement
-    return task;
-}

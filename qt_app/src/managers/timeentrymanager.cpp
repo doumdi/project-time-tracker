@@ -239,9 +239,3 @@ QVariantMap TimeEntryManager::timeEntryToVariantMap(const TimeEntryModel &entry)
     return map;
 }
 
-TimeEntryModel TimeEntryManager::variantMapToTimeEntry(const QVariantMap &data)
-{
-    TimeEntryModel entry;
-    // TODO: Implement
-    return entry;
-}
