@@ -22,7 +22,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.9.3'
           modules: 'qtcharts qtconnectivity'
           cache: true
           setup-python: true
