@@ -252,9 +252,9 @@ Item {
 
             var taskData = {
                 "name": nameField.text.trim(),
-                "due_date": dueDateField.text || null,
-                "project_id": projectsModel.get(projectComboBox.currentIndex).id,
-                "allocated_time": allocatedTimeSpinBox.value
+                "dueDate": dueDateField.text || null,
+                "projectId": projectsModel.get(projectComboBox.currentIndex).id,
+                "allocatedMinutes": allocatedTimeSpinBox.value
             }
 
             if (isEditing) {

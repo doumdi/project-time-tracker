@@ -348,10 +348,10 @@ Item {
 
         onAccepted: {
             var entryData = {
-                "project_id": projectsModel.get(editProjectCombo.currentIndex).id,
+                "projectId": projectsModel.get(editProjectCombo.currentIndex).id,
                 "description": editDescriptionField.text,
                 "duration": editDurationSpinBox.value,
-                "start_time": editDialog.startTime
+                "startTime": editDialog.startTime
             }
             TimeEntryManager.updateTimeEntry(entryId, entryData)
         }
