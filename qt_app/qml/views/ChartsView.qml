@@ -101,8 +101,13 @@ Item {
             weekData.push(weekMinutes / 60.0)
         }
         
-        // Create a BarSet with the data
-        var barSet = weeklySeries.append("Hours", weekData)
+        // Create a BarSet and add values individually
+        var barSet = weeklySeries.append("Hours", [])
+        if (barSet) {
+            for (var i = 0; i < weekData.length; i++) {
+                barSet.append(weekData[i])
+            }
+        }
     }
 
     function findProject(projectId) {

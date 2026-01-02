@@ -53,7 +53,7 @@ Item {
             // Filter by project
             if (projectFilterCombo.currentIndex > 0) {
                 var selectedProject = projectsModel.get(projectFilterCombo.currentIndex - 1)
-                if (entry.project_id !== selectedProject.id) {
+                if (parseInt(entry.project_id) !== parseInt(selectedProject.id)) {
                     include = false
                 }
             }
