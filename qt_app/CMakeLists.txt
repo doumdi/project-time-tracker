@@ -20,6 +20,11 @@ find_package(Qt6 REQUIRED COMPONENTS
     Concurrent
     LinguistTools    
 )
+# Set Qt policies (Qt 6.5+)
+if(COMMAND qt_policy)
+    # QTP0004: qmldir files for each extra directory
+    qt_policy(SET QTP0004 NEW)
+endif()
 
 qt_standard_project_setup()
 
@@ -61,7 +66,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Source files
 set(SOURCES
-    src/main.cpp
     src/database/database.cpp
     src/database/projectmodel.cpp
     src/database/timeentrymodel.cpp
@@ -149,10 +153,33 @@ else()
     qt_add_translation(QM_FILES ${TS_FILES})
 endif()
 
+# Create lib that will be reused everywhere
+add_library(${PROJECT_NAME}_static_lib STATIC ${SOURCES} ${HEADERS})
+target_link_libraries(${PROJECT_NAME}_static_lib PUBLIC
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
+    Qt6::Sql
+    Qt6::Concurrent
+)
+target_include_directories(${PROJECT_NAME}_static_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Link optional modules if found
+if(Qt6Bluetooth_FOUND)
+    target_link_libraries(${PROJECT_NAME}_static_lib PUBLIC Qt6::Bluetooth)
+    target_compile_definitions(${PROJECT_NAME}_static_lib PUBLIC HAVE_QT_BLUETOOTH)
+endif()
+
+if(Qt6Charts_FOUND)
+    target_link_libraries(${PROJECT_NAME}_static_lib PUBLIC Qt6::Charts)
+    target_compile_definitions(${PROJECT_NAME}_static_lib PUBLIC HAVE_QT_CHARTS)
+endif()
+
 
 # Add executable
 if(EMSCRIPTEN)
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+    add_executable(${PROJECT_NAME} src/main.cpp)
     target_link_options(${PROJECT_NAME} PRIVATE
         -sASYNCIFY
         -sALLOW_MEMORY_GROWTH=1
@@ -161,14 +188,14 @@ if(EMSCRIPTEN)
     )
 elseif(APPLE)
     # macOS app bundle
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS})
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE src/main.cpp)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.doumdi.projecttimetracker"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
 else()
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+    add_executable(${PROJECT_NAME} src/main.cpp)
 endif()
 
 # Add QML module
@@ -182,6 +209,7 @@ qt_add_qml_module(${PROJECT_NAME}
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${PROJECT_NAME}_static_lib
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -189,17 +217,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Sql
     Qt6::Concurrent
 )
-
-# Link optional modules if found
-if(Qt6Bluetooth_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Bluetooth)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_QT_BLUETOOTH)
-endif()
-
-if(Qt6Charts_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Charts)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_QT_CHARTS)
-endif()
 
 # Install rules
 install(TARGETS ${PROJECT_NAME}
@@ -209,5 +226,5 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 # Enable testing
-# enable_testing()
-# add_subdirectory(tests)
+enable_testing()
+add_subdirectory(tests)
