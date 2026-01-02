@@ -35,7 +35,16 @@ Item {
 
     function checkBleAvailability() {
         // Check if BLE is available (requires conditional compilation)
-        bleAvailable = typeof BleManager !== 'undefined'
+        try {
+            bleAvailable = typeof BleManager !== 'undefined' && BleManager !== null
+            if (bleAvailable) {
+                // Verify that BleManager has expected methods
+                bleAvailable = typeof BleManager.getMonitoredDevices === 'function'
+            }
+        } catch (error) {
+            bleAvailable = false
+        }
+        
         if (!bleAvailable) {
             statusLabel.text = qsTr("Bluetooth is not available on this platform")
         }

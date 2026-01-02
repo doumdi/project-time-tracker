@@ -318,8 +318,9 @@ Item {
                 model: projectsModel
                 textRole: "name"
                 currentIndex: {
+                    var targetId = parseInt(editDialog.projectId)
                     for (var i = 0; i < projectsModel.count; i++) {
-                        if (projectsModel.get(i).id === editDialog.projectId) {
+                        if (parseInt(projectsModel.get(i).id) === targetId) {
                             return i
                         }
                     }

@@ -96,10 +96,8 @@ Item {
             weekData.push(weekMinutes / 60.0)
         }
         
-        // Add data to series
-        for (var i = 0; i < weekData.length; i++) {
-            weeklySeries.append(i, weekData[i])
-        }
+        // Create a BarSet and add data
+        var barSet = weeklySeries.append("Hours", weekData)
         
         // Update axis labels (approximate)
         weeklyAxisX.min = 0

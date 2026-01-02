@@ -108,7 +108,7 @@ Item {
 
     function calculateStats() {
         var totalMinutes = 0
-        var uniqueDays = new Set()
+        var uniqueDaysObj = {}
         var projectStats = {}
         
         for (var i = 0; i < filteredEntries.length; i++) {
@@ -116,7 +116,7 @@ Item {
             totalMinutes += entry.duration || 0
             
             var dateStr = new Date(entry.start_time).toDateString()
-            uniqueDays.add(dateStr)
+            uniqueDaysObj[dateStr] = true
             
             var projectId = entry.project_id
             if (!projectStats[projectId]) {
@@ -130,14 +130,26 @@ Item {
             projectStats[projectId].entryCount++
         }
         
-        var avgPerDay = uniqueDays.size > 0 ? totalMinutes / uniqueDays.size : 0
+        // Count unique days
+        var uniqueDaysCount = 0
+        for (var day in uniqueDaysObj) {
+            uniqueDaysCount++
+        }
+        
+        var avgPerDay = uniqueDaysCount > 0 ? totalMinutes / uniqueDaysCount : 0
+        
+        // Convert projectStats object to array
+        var projectStatsArray = []
+        for (var pid in projectStats) {
+            projectStatsArray.push(projectStats[pid])
+        }
         
         reportStats = {
             totalMinutes: totalMinutes,
             totalEntries: filteredEntries.length,
-            uniqueDays: uniqueDays.size,
+            uniqueDays: uniqueDaysCount,
             averagePerDay: avgPerDay,
-            projectStats: Object.values(projectStats)
+            projectStats: projectStatsArray
         }
         
         updateStatistics()

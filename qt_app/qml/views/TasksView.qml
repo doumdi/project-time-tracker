@@ -216,8 +216,9 @@ Item {
                 textRole: "name"
                 currentIndex: {
                     if (!taskDialog.projectId) return -1
+                    var targetId = parseInt(taskDialog.projectId)
                     for (var i = 0; i < projectsModel.count; i++) {
-                        if (projectsModel.get(i).id === taskDialog.projectId) {
+                        if (parseInt(projectsModel.get(i).id) === targetId) {
                             return i
                         }
                     }
