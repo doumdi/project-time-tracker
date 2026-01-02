@@ -4,9 +4,10 @@ project(ProjectTimeTracker VERSION 1.0.15 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_AUTOMOC ON)
-# set(CMAKE_AUTORCC ON)
-# set(CMAKE_AUTOUIC ON)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 
 # Qt6 packages - requires Qt 6.2 or later (6.10.1+ recommended)
@@ -82,9 +83,18 @@ set(HEADERS
     include/utils/datetimeutils.h
 )
 
-# QML resources
-set(QML_RESOURCES
-    qml/qml.qrc
+# QML files
+set(QML_FILES
+    qml/main.qml
+    qml/views/TimeTrackerView.qml
+    qml/views/ProjectManagerView.qml
+    qml/views/TasksView.qml
+    qml/views/TimeEntryListView.qml
+    qml/views/CalendarView.qml
+    qml/views/ChartsView.qml
+    qml/views/ReportsView.qml
+    qml/views/OfficePresenceView.qml
+    qml/views/SettingsView.qml
 )
 
 # Translation files
@@ -105,15 +115,9 @@ else()
 endif()
 
 
-#Generate .h files from the .ui files
-#QT6_WRAP_UI(moc_uis ${uis})
-
-#This will generate moc_* for Qt
-# QT6_WRAP_CPP(MOC_SRCS ${HEADERS})
-
 # Add executable
 if(EMSCRIPTEN)
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
     target_link_options(${PROJECT_NAME} PRIVATE
         -sASYNCIFY
         -sALLOW_MEMORY_GROWTH=1
@@ -122,17 +126,23 @@ if(EMSCRIPTEN)
     )
 elseif(APPLE)
     # macOS app bundle
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS})
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.doumdi.projecttimetracker"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
-
-
 else()
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QML_RESOURCES} ${MOC_SRCS})
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 endif()
+
+# Add QML module
+qt_add_qml_module(${PROJECT_NAME}
+    URI ProjectTimeTracker
+    VERSION 1.0
+    QML_FILES ${QML_FILES}
+    RESOURCE_PREFIX /
+)
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE

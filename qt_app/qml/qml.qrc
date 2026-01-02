@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/">
+    <qresource prefix="/qml">
         <file>main.qml</file>
         <file>views/TimeTrackerView.qml</file>
         <file>views/TimeEntryListView.qml</file>

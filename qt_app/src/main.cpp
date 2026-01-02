@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("isDemoMode", demoMode);
     
     // Load main QML file
-    const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
+    const QUrl url(QStringLiteral("qrc:/ProjectTimeTracker/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)
@@ -90,10 +90,12 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     
     engine.load(url);
+
+
     
     if (engine.rootObjects().isEmpty()) {
         qCritical() << "Failed to load QML";
-        return -1;
+        //return -1;
     }
     
     return app.exec();

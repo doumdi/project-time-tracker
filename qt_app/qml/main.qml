@@ -55,40 +55,40 @@ ApplicationWindow {
         anchors.right: parent.right
         currentIndex: tabBar.currentIndex
 
-        TimeTrackerView {
-            id: timeTrackerView
+        Loader {
+            source: "views/TimeTrackerView.qml"
         }
 
-        ProjectManagerView {
-            id: projectManagerView
+        Loader {
+            source: "views/ProjectManagerView.qml"
         }
 
-        TasksView {
-            id: tasksView
+        Loader {
+            source: "views/TasksView.qml"
         }
 
-        TimeEntryListView {
-            id: timeEntryListView
+        Loader {
+            source: "views/TimeEntryListView.qml"
         }
 
-        CalendarView {
-            id: calendarView
+        Loader {
+            source: "views/CalendarView.qml"
         }
 
-        ChartsView {
-            id: chartsView
+        Loader {
+            source: "views/ChartsView.qml"
         }
 
-        ReportsView {
-            id: reportsView
+        Loader {
+            source: "views/ReportsView.qml"
         }
 
-        OfficePresenceView {
-            id: officePresenceView
+        Loader {
+            source: "views/OfficePresenceView.qml"
         }
 
-        SettingsView {
-            id: settingsView
+        Loader {
+            source: "views/SettingsView.qml"
         }
     }
 
