@@ -11,7 +11,7 @@ jobs:
   build-desktop:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest] #windows-latest, macos-latest]
     
     runs-on: ${{ matrix.os }}
     
@@ -71,81 +71,81 @@ jobs:
             !qt_app/build/**/*.o
             !qt_app/build/**/*.obj
 
-  build-wasm:
-    runs-on: ubuntu-latest
+  # build-wasm:
+  #   runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
       
-      - name: Install Qt for WebAssembly
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.5.3'
-          arch: 'wasm_singlethread'
-          modules: 'qtcharts'
-          cache: true
-          setup-python: true
-          aqtversion: '==3.1.*'
+  #     - name: Install Qt for WebAssembly
+  #       uses: jurplel/install-qt-action@v4
+  #       with:
+  #         version: '6.5.3'
+  #         arch: 'wasm_singlethread'
+  #         modules: 'qtcharts'
+  #         cache: true
+  #         setup-python: true
+  #         aqtversion: '==3.1.*'
       
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: '3.1.25'
-          actions-cache-folder: 'emsdk-cache'
+  #     - name: Setup Emscripten
+  #       uses: mymindstorm/setup-emsdk@v14
+  #       with:
+  #         version: '3.1.25'
+  #         actions-cache-folder: 'emsdk-cache'
       
-      - name: Verify Emscripten Installation
-        run: |
-          emcc --version
-          echo "EMSDK: $EMSDK"
+  #     - name: Verify Emscripten Installation
+  #       run: |
+  #         emcc --version
+  #         echo "EMSDK: $EMSDK"
       
-      - name: Configure CMake for WebAssembly
-        working-directory: qt_app
-        run: |
-          mkdir build-wasm
-          cd build-wasm
-          emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
+  #     - name: Configure CMake for WebAssembly
+  #       working-directory: qt_app
+  #       run: |
+  #         mkdir build-wasm
+  #         cd build-wasm
+  #         emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
       
-      - name: Build WebAssembly
-        working-directory: qt_app/build-wasm
-        run: cmake --build .
+  #     - name: Build WebAssembly
+  #       working-directory: qt_app/build-wasm
+  #       run: cmake --build .
       
-      - name: Upload WebAssembly artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ProjectTimeTracker-wasm
-          path: |
-            qt_app/build-wasm/*.html
-            qt_app/build-wasm/*.js
-            qt_app/build-wasm/*.wasm
+  #     - name: Upload WebAssembly artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ProjectTimeTracker-wasm
+  #         path: |
+  #           qt_app/build-wasm/*.html
+  #           qt_app/build-wasm/*.js
+  #           qt_app/build-wasm/*.wasm
 
-  deploy-wasm:
-    needs: build-wasm
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
+  # deploy-wasm:
+  #   needs: build-wasm
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #     pages: write
+  #     id-token: write
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
       
-      - name: Download WebAssembly artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ProjectTimeTracker-wasm
-          path: wasm-dist
+  #     - name: Download WebAssembly artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: ProjectTimeTracker-wasm
+  #         path: wasm-dist
       
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+  #     - name: Setup Pages
+  #       uses: actions/configure-pages@v5
       
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: wasm-dist
+  #     - name: Upload Pages artifact
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         path: wasm-dist
       
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
