@@ -66,11 +66,16 @@ Item {
     }
 
     function updateWeeklyChart() {
-        weeklySeries.clear()
+        // Clear any existing sets
+        while (weeklySeries.count > 0) {
+            weeklySeries.remove(weeklySeries.at(0))
+        }
+        
+        // Clear axis categories
+        weeklyAxisX.clear()
         
         // Get last 8 weeks
         var now = new Date()
-        var weekLabels = []
         var weekData = []
         
         for (var i = 7; i >= 0; i--) {
@@ -92,16 +97,12 @@ Item {
             }
             
             var label = Qt.formatDate(weekStart, "MMM dd")
-            weekLabels.push(label)
+            weeklyAxisX.append(label)
             weekData.push(weekMinutes / 60.0)
         }
         
-        // Create a BarSet and add data
+        // Create a BarSet with the data
         var barSet = weeklySeries.append("Hours", weekData)
-        
-        // Update axis labels (approximate)
-        weeklyAxisX.min = 0
-        weeklyAxisX.max = 7
     }
 
     function findProject(projectId) {
@@ -241,11 +242,15 @@ Item {
                         }
                         Label {
                             text: {
-                                var activeProjects = new Set()
+                                var activeProjects = {}
                                 for (var i = 0; i < timeEntries.length; i++) {
-                                    activeProjects.add(timeEntries[i].project_id)
+                                    activeProjects[timeEntries[i].project_id] = true
                                 }
-                                return activeProjects.size
+                                var count = 0
+                                for (var pid in activeProjects) {
+                                    count++
+                                }
+                                return count
                             }
                             Layout.columnSpan: 2
                         }
@@ -256,15 +261,19 @@ Item {
                         }
                         Label {
                             text: {
-                                var uniqueDays = new Set()
+                                var uniqueDays = {}
                                 var total = 0
                                 for (var i = 0; i < timeEntries.length; i++) {
                                     var entry = timeEntries[i]
                                     var date = new Date(entry.start_time).toDateString()
-                                    uniqueDays.add(date)
+                                    uniqueDays[date] = true
                                     total += entry.duration || 0
                                 }
-                                var avg = uniqueDays.size > 0 ? total / uniqueDays.size : 0
+                                var dayCount = 0
+                                for (var day in uniqueDays) {
+                                    dayCount++
+                                }
+                                var avg = dayCount > 0 ? total / dayCount : 0
                                 return formatDuration(Math.round(avg))
                             }
                             Layout.columnSpan: 2
