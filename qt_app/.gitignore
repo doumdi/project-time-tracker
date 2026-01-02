@@ -1,0 +1,56 @@
+# Qt build artifacts
+build/
+build-*/
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.autosave
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Qt Creator
+*.pro.user*
+*.qmlproject.user*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled translation files
+*.qm
+
+# Test results
+Testing/
+
+# Test databases (generated from Electron app)
+tests/test_database.db
+
+# WebAssembly
+*.wasm
+*.js.mem
+*.data
+
+# macOS
+.DS_Store

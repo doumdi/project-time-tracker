@@ -2,6 +2,23 @@
 
 A cross-platform desktop application for tracking time spent on engineering projects with modern UI and local database storage.
 
+## Available Implementations
+
+This project is available in two implementations:
+
+### 1. **Electron/React Version** (Original)
+- Located in the root directory
+- Built with Electron, React, and SQLite
+- Web version available at [GitHub Pages](https://doumdi.github.io/project-time-tracker/)
+
+### 2. **Qt/C++/QML Version** (New)
+- Located in the `qt_app/` directory
+- Built with Qt 6, C++17, and QML
+- Native performance with smaller binary size
+- See [Qt App README](qt_app/README.md) for details
+
+Both implementations share the same database schema and can work with the same data files.
+
 ## 🌐 Try the Web Demo
 
 Experience Project Time Tracker directly in your browser with pre-populated demo data:
@@ -77,12 +94,26 @@ Author(s) :
 
 ## Technology Stack
 
+### Electron Version (Original)
+
 - **Electron** - Cross-platform desktop app framework
 - **React** - Modern UI library
 - **SQLite** - Local database for data storage
 - **Chart.js** - Charts and visualizations
 - **@stoprocent/noble** - Bluetooth Low Energy (BLE) device detection
 - **Webpack** - Build tool
+
+### Qt Version (New)
+
+- **Qt 6** - Cross-platform application framework (6.2+, 6.5+ recommended)
+- **C++17** - High-performance backend
+- **QML** - Declarative UI language
+- **Qt SQL** - Database module with SQLite support
+- **Qt Bluetooth** - BLE device detection
+- **Qt Charts** - Charts and visualizations
+- **CMake** - Build system
+
+See [qt_app/README.md](qt_app/README.md) for Qt version installation and build instructions.
 
 ## Installation & Setup
 
