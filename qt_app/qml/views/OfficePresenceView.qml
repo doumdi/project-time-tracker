@@ -56,7 +56,7 @@ Item {
         try {
             monitorActive = PresenceMonitor.active
             inOffice = PresenceMonitor.inOffice
-            sessionDuration = PresenceMonitor.sessionDuration()
+            sessionDuration = PresenceMonitor.sessionDuration
             
             updateStatusDisplay()
         } catch (error) {

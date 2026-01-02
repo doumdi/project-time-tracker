@@ -35,15 +35,17 @@ ApplicationWindow {
         id: tabBar
         width: parent.width
         currentIndex: currentTabIndex
-        
+
         TabButton { text: qsTr("Timer") }
+
         TabButton { text: qsTr("Projects") }
         TabButton { text: qsTr("Tasks") }
         TabButton { text: qsTr("Time Entries") }
         TabButton { text: qsTr("Calendar") }
-        TabButton { text: qsTr("Charts") }
+        //TabButton { text: qsTr("Charts") }
         TabButton { text: qsTr("Reports") }
         TabButton { text: qsTr("Office Presence") }
+
         TabButton { text: qsTr("Settings") }
     }
 
@@ -74,11 +76,11 @@ ApplicationWindow {
         Loader {
             source: "views/CalendarView.qml"
         }
-
+/*
         Loader {
             source: "views/ChartsView.qml"
         }
-
+*/
         Loader {
             source: "views/ReportsView.qml"
         }
@@ -90,6 +92,7 @@ ApplicationWindow {
         Loader {
             source: "views/SettingsView.qml"
         }
+
     }
 
     Component.onCompleted: {
@@ -99,3 +102,4 @@ ApplicationWindow {
         }
     }
 }
+

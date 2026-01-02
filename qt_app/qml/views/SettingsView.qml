@@ -20,12 +20,13 @@ Item {
 
     function loadBleDevices() {
         if (!bleAvailable) return
-        
+        /*
         monitoredDevicesModel.clear()
         var devices = BleManager.getMonitoredDevices()
         for (var i = 0; i < devices.length; i++) {
             monitoredDevicesModel.append(devices[i])
         }
+        */
     }
 
     StackView {
