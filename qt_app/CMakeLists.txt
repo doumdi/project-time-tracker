@@ -142,17 +142,6 @@ set(TS_FILES
     translations/app_fr.ts
 )
 
-# Create translation targets (Qt 6.2+)
-if(COMMAND qt6_add_translations)
-    qt6_add_translations(${PROJECT_NAME}
-        TS_FILES ${TS_FILES}
-        RESOURCE_PREFIX "/translations"
-    )
-else()
-    # Fallback for older Qt versions
-    qt_add_translation(QM_FILES ${TS_FILES})
-endif()
-
 # Create lib that will be reused everywhere
 add_library(${PROJECT_NAME}_static_lib STATIC ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME}_static_lib PUBLIC
@@ -217,6 +206,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Sql
     Qt6::Concurrent
 )
+
+# Create translation targets (Qt 6.2+)
+if(COMMAND qt6_add_translations)
+    qt6_add_translations(${PROJECT_NAME}
+        TS_FILES ${TS_FILES}
+        RESOURCE_PREFIX "/translations"
+    )
+else()
+    # Fallback for older Qt versions
+    qt_add_translation(QM_FILES ${TS_FILES})
+endif()
 
 # Install rules
 install(TARGETS ${PROJECT_NAME}

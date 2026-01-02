@@ -86,12 +86,10 @@ bool Database::initialize(const QString &dbPath)
         return false;
     }
     
-    // Run migrations if not in demo mode
-    if (!m_demoMode) {
-        if (!runMigrations()) {
-            qCritical() << "Failed to run migrations";
-            return false;
-        }
+    // Run migrations
+    if (!runMigrations()) {
+        qCritical() << "Failed to run migrations";
+        return false;
     }
     
     m_initialized = true;
