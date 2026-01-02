@@ -40,6 +40,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libbluetooth-dev libgl1-mesa-dev
+          sudo apt-get install -y \
+            libxcb-cursor0 \
+            libxcb-cursor-dev \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-xinerama0 \
+            libxcb-xfixes0 \
+            xvfb \
+            libgl1-mesa-dev
       
       - name: Verify Qt Installation
         run: |
@@ -60,7 +72,9 @@ jobs:
       
       - name: Test
         working-directory: qt_app/build
-        run: ctest -C Release --output-on-failure
+        run: xvfb-run -a --server-args="-screen 0 1024x768x24" ctest --output-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
