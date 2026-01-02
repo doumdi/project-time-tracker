@@ -17,13 +17,26 @@ find_package(Qt6 REQUIRED COMPONENTS
     Qml
     Quick
     Sql
-    Bluetooth
-    Charts
     Concurrent
     LinguistTools    
 )
 
 qt_standard_project_setup()
+
+# Optional modules
+find_package(Qt6 COMPONENTS Bluetooth Charts QUIET)
+
+if(Qt6Bluetooth_FOUND)
+    message(STATUS "Qt6Bluetooth found - BLE support enabled")
+else()
+    message(WARNING "Qt6Bluetooth not found - BLE support disabled")
+endif()
+
+if(Qt6Charts_FOUND)
+    message(STATUS "Qt6Charts found - Charts support enabled")
+else()
+    message(WARNING "Qt6Charts not found - Charts support disabled")
+endif()
 
 # Platform-specific settings
 if(WIN32)
@@ -53,17 +66,23 @@ set(SOURCES
     src/database/projectmodel.cpp
     src/database/timeentrymodel.cpp
     src/database/taskmodel.cpp
-    src/database/officePresencemodel.cpp
-    src/database/bledevicemodel.cpp
     src/database/databasemigration.cpp
     src/managers/projectmanager.cpp
     src/managers/timeentrymanager.cpp
     src/managers/taskmanager.cpp
     src/managers/settingsmanager.cpp
-    src/ble/blemanager.cpp
-    src/ble/presencemonitor.cpp
     src/utils/datetimeutils.cpp
 )
+
+# Add BLE sources only if Bluetooth is available
+if(Qt6Bluetooth_FOUND)
+    list(APPEND SOURCES
+        src/database/officePresencemodel.cpp
+        src/database/bledevicemodel.cpp
+        src/ble/blemanager.cpp
+        src/ble/presencemonitor.cpp
+    )
+endif()
 
 # Header files
 set(HEADERS
@@ -71,17 +90,33 @@ set(HEADERS
     include/database/projectmodel.h
     include/database/timeentrymodel.h
     include/database/taskmodel.h
-    include/database/officePresencemodel.h
-    include/database/bledevicemodel.h
     include/database/databasemigration.h
     include/managers/projectmanager.h
     include/managers/timeentrymanager.h
     include/managers/taskmanager.h
     include/managers/settingsmanager.h
-    include/ble/blemanager.h
-    include/ble/presencemonitor.h
     include/utils/datetimeutils.h
 )
+
+# Add BLE headers only if Bluetooth is available
+if(Qt6Bluetooth_FOUND)
+    list(APPEND HEADERS
+        include/database/officePresencemodel.h
+        include/database/bledevicemodel.h
+        include/ble/blemanager.h
+        include/ble/presencemonitor.h
+    )
+endif()
+
+# Add BLE headers only if Bluetooth is available
+if(Qt6Bluetooth_FOUND)
+    list(APPEND HEADERS
+        include/database/officePresencemodel.h
+        include/database/bledevicemodel.h
+        include/ble/blemanager.h
+        include/ble/presencemonitor.h
+    )
+endif()
 
 # QML files
 set(QML_FILES
@@ -151,13 +186,19 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::Sql
-    Qt6::Bluetooth
-    Qt6::Charts
     Qt6::Concurrent
 )
 
-get_target_property(TARGET_INCLUDES ${PROJECT_NAME} INCLUDE_DIRECTORIES)
-message(STATUS "Include directories ${TARGET_INCLUDES}")
+# Link optional modules if found
+if(Qt6Bluetooth_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Bluetooth)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_QT_BLUETOOTH)
+endif()
+
+if(Qt6Charts_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Charts)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_QT_CHARTS)
+endif()
 
 # Install rules
 install(TARGETS ${PROJECT_NAME}

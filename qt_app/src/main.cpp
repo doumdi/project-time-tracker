@@ -10,8 +10,10 @@
 #include "managers/timeentrymanager.h"
 #include "managers/taskmanager.h"
 #include "managers/settingsmanager.h"
+#ifdef HAVE_QT_BLUETOOTH
 #include "ble/blemanager.h"
 #include "ble/presencemonitor.h"
+#endif
 #include "utils/datetimeutils.h"
 
 int main(int argc, char *argv[])
@@ -50,8 +52,10 @@ int main(int argc, char *argv[])
     TimeEntryManager timeEntryManager;
     TaskManager taskManager;
     SettingsManager settingsManager;
+#ifdef HAVE_QT_BLUETOOTH
     BleManager bleManager;
     PresenceMonitor presenceMonitor(&bleManager);
+#endif
     DateTimeUtils dateTimeUtils;
     
     // Set up translations
@@ -74,8 +78,10 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "TimeEntryManager", &timeEntryManager);
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "TaskManager", &taskManager);
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "SettingsManager", &settingsManager);
+#ifdef HAVE_QT_BLUETOOTH
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "BleManager", &bleManager);
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "PresenceMonitor", &presenceMonitor);
+#endif
     qmlRegisterSingletonInstance("ProjectTimeTracker", 1, 0, "DateTimeUtils", &dateTimeUtils);
     
     // Set demo mode context property
