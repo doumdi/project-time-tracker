@@ -177,6 +177,7 @@ qt_add_qml_module(${PROJECT_NAME}
     VERSION 1.0
     QML_FILES ${QML_FILES}
     RESOURCE_PREFIX /
+    OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/qml/ProjectTimeTracker
 )
 
 # Link Qt libraries
