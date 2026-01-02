@@ -12,11 +12,11 @@ private slots:
     {
         Database* db = Database::instance();
         db->setDemoMode(true);
-        db->initialize();
+        QVERIFY(db->initialize());
         
         // Create a test project
         QSqlQuery query(db->database());
-        query.exec("INSERT INTO projects (id, name, description, color, is_active) VALUES (1, 'Test Project', 'Test Description', '#FF0000', 1)");
+        QVERIFY(query.exec("INSERT INTO projects (id, name, description, color) VALUES (1, 'Test Project', 'Test Description', '#FF0000')"));
     }
 
     void testTimerStartStop()
